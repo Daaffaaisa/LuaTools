@@ -69,7 +69,7 @@ public class AppSettings
 public class SettingsService
 {
     private static readonly string Dir =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "LuaToolsGui");
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "LuaToolsGuiDev");
     private static readonly string FilePath = Path.Combine(Dir, "settings.json");
 
     private AppSettings _settings = new();

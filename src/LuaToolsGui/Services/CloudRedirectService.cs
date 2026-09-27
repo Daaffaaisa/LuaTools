@@ -16,7 +16,7 @@ namespace LuaToolsGui.Services;
 public class CloudRedirectService(GithubProxy gh)
 {
     private static readonly string ToolDir =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "LuaToolsGui", "cloudredirect");
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "LuaToolsGuiDev", "cloudredirect");
     private static string ExePath => Path.Combine(ToolDir, "CloudRedirect.exe");
 
     private static readonly JsonSerializerOptions JsonOpts = new() { PropertyNameCaseInsensitive = true };

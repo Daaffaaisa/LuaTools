@@ -60,7 +60,7 @@ public class CacheData
 public class CacheService
 {
     private static readonly string Dir =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "LuaToolsGui");
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "LuaToolsGuiDev");
     private static readonly string FilePath = Path.Combine(Dir, "cache.json");
     private static readonly string TmpPath = FilePath + ".tmp";
 

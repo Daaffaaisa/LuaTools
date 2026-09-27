@@ -91,7 +91,7 @@ public partial class DepotDownloaderService(
     public bool CanFetchManifests => !auth.IsGuest;
 
     private static readonly string ToolDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "LuaToolsGui", "depotdownloader");
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "LuaToolsGuiDev", "depotdownloader");
 
     private static string ExePath => Path.Combine(ToolDir, "DepotDownloaderMod.exe");
 

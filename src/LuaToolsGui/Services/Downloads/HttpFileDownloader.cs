@@ -20,7 +20,7 @@ internal static class HttpFileDownloader
 {
     /// <summary>Interim staging destination. Downloads land here, then are deleted once installed.</summary>
     public static readonly string StagingFolder =
-        Path.Combine(Path.GetTempPath(), "LuaToolsGui", "downloads");
+        Path.Combine(Path.GetTempPath(), "LuaToolsGuiDev", "downloads");
 
     /// <summary>Stream the response body to a staged file, reporting byte counts as it goes.</summary>
     public static async Task<DownloadedFile> SaveResponseAsync(

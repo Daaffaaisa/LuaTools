@@ -45,7 +45,7 @@ public class SteamAutoCrackService(
     ILogger<SteamAutoCrackService> log)
 {
     private static readonly string ToolDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "LuaToolsGui", "steamautocrack");
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "LuaToolsGuiDev", "steamautocrack");
 
     private static string ExePath => Path.Combine(ToolDir, "SteamAutoCrack.exe");
 

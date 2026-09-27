@@ -244,7 +244,7 @@ public class UnlockerService(SteamService steam, SettingsService settings, Cache
             version = release.TagName;
         }
 
-        string staging = Path.Combine(Path.GetTempPath(), "LuaToolsGui", "mode", Guid.NewGuid().ToString("N"));
+        string staging = Path.Combine(Path.GetTempPath(), "LuaToolsGuiDev", "mode", Guid.NewGuid().ToString("N"));
         try
         {
             Directory.CreateDirectory(staging);
@@ -638,7 +638,7 @@ public class UnlockerService(SteamService steam, SettingsService settings, Cache
         var asset = FindAsset(release, CloudRedirectDll);
         if (asset is null) return ModeInstallResult.Fail(string.Format(Resources.Strings.Err_ReleaseMissingFile, CloudRedirectDll));
 
-        string staging = Path.Combine(Path.GetTempPath(), "LuaToolsGui", "cloud", Guid.NewGuid().ToString("N"));
+        string staging = Path.Combine(Path.GetTempPath(), "LuaToolsGuiDev", "cloud", Guid.NewGuid().ToString("N"));
         try
         {
             Directory.CreateDirectory(staging);

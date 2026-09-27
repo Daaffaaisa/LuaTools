@@ -55,7 +55,7 @@ public class GithubProxy
             try
             {
                 using var req = new HttpRequestMessage(HttpMethod.Get, candidate);
-                req.Headers.TryAddWithoutValidation("User-Agent", "LuaToolsGui");
+                req.Headers.TryAddWithoutValidation("User-Agent", "LuaToolsGuiDev");
                 req.Headers.TryAddWithoutValidation("Accept", "application/vnd.github+json");
                 var res = await _http.SendAsync(req, ct);
                 if (res.IsSuccessStatusCode) return res;
@@ -86,7 +86,7 @@ public class GithubProxy
             try
             {
                 using var req = new HttpRequestMessage(HttpMethod.Get, candidate);
-                req.Headers.TryAddWithoutValidation("User-Agent", "LuaToolsGui");
+                req.Headers.TryAddWithoutValidation("User-Agent", "LuaToolsGuiDev");
                 using var res = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
                 res.EnsureSuccessStatusCode();
 

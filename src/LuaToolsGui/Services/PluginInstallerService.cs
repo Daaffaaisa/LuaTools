@@ -177,7 +177,7 @@ public class PluginInstallerService(SteamService steam, GithubProxy gh, CefInjec
     }
 
     private static string FrontendDir => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "LuaToolsGui", "plugin");
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "LuaToolsGuiDev", "plugin");
     private static string LuatoolsJsPath => Path.Combine(FrontendDir, "public", "luatools.js");
     private static string ManifestPath => Path.Combine(FrontendDir, "installed.json");
 

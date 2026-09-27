@@ -31,7 +31,7 @@ public class NexusModsService
         _http.DefaultRequestHeaders.Add("Application-Name", "LuaTools");
         _http.DefaultRequestHeaders.Add("Application-Version", "1.3.1");
         
-        ModsCacheDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "LuaToolsGui", "ModsCache");
+        ModsCacheDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "LuaToolsGuiDev", "ModsCache");
         Directory.CreateDirectory(ModsCacheDirectory);
     }
 

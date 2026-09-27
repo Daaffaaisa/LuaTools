@@ -13,7 +13,7 @@ namespace LuaToolsGui.Services;
 public class AuthService
 {
     private static readonly string AuthFile = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "LuaToolsGui", "auth.dat");
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "LuaToolsGuiDev", "auth.dat");
 
     private readonly HttpClient _http = AppHttp.Create(TimeSpan.FromSeconds(30));
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
