@@ -37,7 +37,7 @@ jobs:
       run: dotnet publish src/LuaToolsGui/LuaToolsGui.csproj -c Release -r win-x64 -o publish_output
       
     - name: 6. Rakit Paket Auto-Update (Velopack)
-      run: vpk pack -u LuaToolsDev -v 99.0.${{ github.run_number }} -p publish_output -o release_output
+      run: vpk pack -u LuaToolsDev -v 99.0.${{ github.run_number }} -p publish_output -o release_output --mainExe LuaTools.exe
       
     - name: 7. Pajang di Halaman Release
       uses: softprops/action-gh-release@v1
