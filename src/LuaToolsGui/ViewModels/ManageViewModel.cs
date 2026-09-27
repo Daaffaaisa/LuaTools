@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Media;
@@ -194,6 +194,36 @@ public partial class ManageViewModel : PagedListViewModel<LuaTileViewModel>
     /// <summary>Set by App so "Manage Build" can open this game on the Builds page.</summary>
     public Action<long>? NavigateToBuilds { get; set; }
 
+    /// <summary>Action to open the Leftover Cleaner window for a specific game.</summary>
+    public Action<LuaTileViewModel>? OpenLeftoversCleaner { get; set; }
+
+    /// <summary>Action to open the Storage Mover window for a specific game.</summary>
+    public Action<LuaTileViewModel>? OpenStorageMover { get; set; }
+    
+    /// <summary>Action to open the Mod Folder Settings window for a specific game.</summary>
+    public Action<LuaTileViewModel>? OpenModSettings { get; set; }
+
+    [RelayCommand]
+    private void CleanLeftovers(LuaTileViewModel tile)
+    {
+        if (tile != null)
+            OpenLeftoversCleaner?.Invoke(tile);
+    }
+
+    [RelayCommand]
+    private void MoveStorage(LuaTileViewModel tile)
+    {
+        if (tile != null)
+            OpenStorageMover?.Invoke(tile);
+    }
+    
+    [RelayCommand]
+    private void ManageMods(LuaTileViewModel tile)
+    {
+        if (tile != null)
+            OpenModSettings?.Invoke(tile);
+    }
+
     // Paging (Items/PageSize/CurrentPage/…), the filtered slice, refresh cooldown, IsLoading/EmptyMessage
     // and the empty-state gating all live in PagedListViewModel<LuaTileViewModel>.
 
@@ -348,6 +378,10 @@ public partial class ManageViewModel : PagedListViewModel<LuaTileViewModel>
 
     /// <summary>Set by App. Opens the launch-option editor for a game (appid, name).</summary>
     public Action<long, string>? OpenLaunchOptions { get; set; }
+    public Action<long, string>? OpenAchievements { get; set; }
+
+    [RelayCommand]
+    private void ManageAchievements(LuaTileViewModel tile) => OpenAchievements?.Invoke(tile.AppId, tile.Name);
 
     /// <summary>Edit this game's Steam launch options (the entries behind the Play button).</summary>
     [RelayCommand]

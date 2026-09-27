@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -38,6 +38,9 @@
   <!-- Embed icon.ico as a resource so the Window Icon="icon.ico" can resolve it at runtime -->
   <ItemGroup>
     <Resource Include="icon.ico" />
+    <None Update="steam_api64.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <!-- Nothing in public/ is bundled anymore. The frontend (luatools.js) is fetched from GitHub releases
@@ -56,6 +59,7 @@
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="Facepunch.Steamworks" Version="2.3.3" />
     <PackageReference Include="Markdig.Wpf" Version="0.5.0.1" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.9" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.9" />

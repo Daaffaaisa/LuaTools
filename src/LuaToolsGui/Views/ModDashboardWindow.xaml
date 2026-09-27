@@ -1,0 +1,121 @@
+<ui:FluentWindow x:Class="LuaToolsGui.Views.ModDashboardWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                 Title="Mod Manager Dashboard" Height="600" Width="800"
+                 WindowStartupLocation="CenterOwner"
+                 ExtendsContentIntoTitleBar="True"
+                 WindowBackdropType="Mica"
+                 Background="Transparent">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0" Title="Mod Manager Dashboard" />
+
+        <Grid Grid.Row="1" Margin="20,0,20,20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <TextBlock x:Name="GameTitleText" FontSize="24" FontWeight="SemiBold" Margin="0,0,0,15" Foreground="White"/>
+
+            <!-- Folder Settings -->
+            <ui:Card Grid.Row="1" Margin="0,0,0,15" Background="#11FFFFFF" BorderBrush="#33FFFFFF">
+                <StackPanel>
+                    <TextBlock Text="Direktori Mod Aktif (Target Ekstrak):" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,8"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <ComboBox x:Name="FoldersCombo" SelectionChanged="FoldersCombo_SelectionChanged" Foreground="White" Background="#22FFFFFF" SelectedValuePath="Path">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Width="4" Height="14" CornerRadius="2" Background="{Binding ColorHex}" Margin="0,0,8,0"/>
+                                        <TextBlock Text="{Binding Path}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <ui:Button Grid.Column="1" Margin="10,0,0,0" Icon="{ui:SymbolIcon FolderAdd24}" Click="AddFolder_Click" Content="Tambah Path"/>
+                    </Grid>
+                    <CheckBox x:Name="DefaultCheckBox" Content="Selalu gunakan direktori ini sebagai Default" Margin="0,10,0,0" 
+                              Foreground="White" Checked="DefaultCheckBox_Changed" Unchecked="DefaultCheckBox_Changed"/>
+                </StackPanel>
+            </ui:Card>
+
+            <!-- Installed Mods List -->
+            <ui:Card Grid.Row="2" Margin="0,0,0,15" Background="#11FFFFFF" BorderBrush="#33FFFFFF" VerticalAlignment="Stretch">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="Mod Terpasang:" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,10"/>
+                    
+                    <ListView x:Name="ModsList" Grid.Row="1" Background="Transparent" BorderThickness="0" Foreground="White" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,5">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    
+                                    <Border Grid.Column="0" Width="4" CornerRadius="2" Background="{Binding ColorHex}" Margin="0,2,12,2" VerticalAlignment="Stretch"/>
+                                    
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="14"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                            <TextBlock Text="{Binding Source}" FontSize="12" Foreground="#AAAAAA" Margin="0,0,10,0"/>
+                                            <TextBlock Text="{Binding InstalledAt, StringFormat='dd MMM yyyy HH:mm'}" FontSize="12" Foreground="#888888"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                    
+                                    <ui:ToggleSwitch Grid.Column="2" IsChecked="{Binding IsEnabled}" Content="Aktif" 
+                                                     Margin="10,0,20,0" VerticalAlignment="Center"
+                                                     Checked="Mod_Toggled" Unchecked="Mod_Toggled" Tag="{Binding Id}"/>
+                                                     
+                                    <ui:Button Grid.Column="3" Icon="{ui:SymbolIcon Delete24}" Appearance="Danger" 
+                                               VerticalAlignment="Center" Click="DeleteMod_Click" Tag="{Binding Id}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                    
+                    <TextBlock x:Name="EmptyModsText" Text="Belum ada mod yang terpasang." 
+                               Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" 
+                               Foreground="#888888" Visibility="Collapsed"/>
+                </Grid>
+            </ui:Card>
+
+            <!-- Drag & Drop Zone -->
+            <Border x:Name="DropZone" Grid.Row="3" Background="#11FFFFFF" BorderBrush="#55FFFFFF" BorderThickness="2" CornerRadius="8" 
+                    MinHeight="100" AllowDrop="True" Drop="DropZone_Drop" DragEnter="DropZone_DragEnter" DragLeave="DropZone_DragLeave">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="20">
+                    <ui:SymbolIcon Symbol="ArrowDownload24" FontSize="32" Foreground="White" Margin="0,0,0,10"/>
+                    <TextBlock Text="Drag &amp; Drop file .zip / .rar mod ke sini untuk Install Manual" Foreground="White" FontWeight="SemiBold"/>
+                </StackPanel>
+            </Border>
+            
+            <Grid x:Name="LoadingOverlay" Grid.RowSpan="4" Background="#AA000000" Visibility="Collapsed">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <ui:ProgressRing IsIndeterminate="True" Width="50" Height="50" Margin="0,0,0,15"/>
+                    <TextBlock x:Name="LoadingText" Text="Sedang memproses..." Foreground="White" FontWeight="SemiBold" FontSize="16" HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Grid>
+            
+        </Grid>
+    </Grid>
+</ui:FluentWindow>

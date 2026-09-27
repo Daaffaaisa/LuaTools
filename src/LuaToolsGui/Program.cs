@@ -8,11 +8,30 @@ using Velopack;
 
 namespace LuaToolsGui;
 
-public static class Program
+public static class Program 
 {
+    public static uint? SamWorkerAppId;
+    public static string? SamWorkerGameName;
+
     [STAThread]
     public static void Main(string[] args)
     {
+        // 1. TANGKAP KLONINGAN SEBELUM YANG LAIN (Mencegah UAC Prompt)
+        if (args is { Length: >= 2 } && args[0] == "--sam-worker")
+        {
+            if (uint.TryParse(args[1], out uint appId))
+            {
+                SamWorkerAppId = appId;
+                SamWorkerGameName = args.Length >= 3 ? args[2] : "Game";
+                
+                // Langsung jalankan App dan abaikan semua logika registry/velopack
+                var workerApp = new App();
+                workerApp.InitializeComponent();
+                workerApp.Run();
+                return;
+            }
+        }
+
         // MUST run before any WPF/UI work: handles Velopack install/update hooks,
         // then no-ops on a normal launch.
         VelopackApp.Build().Run();
@@ -32,7 +51,8 @@ public static class Program
         {
             foreach (var arg in args)
             {
-                if (arg.StartsWith("luatools://", StringComparison.OrdinalIgnoreCase))
+                if (arg.StartsWith("luatools://", StringComparison.OrdinalIgnoreCase) || 
+                    arg.StartsWith("nxm://", StringComparison.OrdinalIgnoreCase))
                 {
                     protocolUrl = arg;
                 }

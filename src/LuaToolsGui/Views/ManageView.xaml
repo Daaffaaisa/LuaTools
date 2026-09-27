@@ -1,4 +1,4 @@
-﻿<UserControl
+<UserControl
     x:Class="LuaToolsGui.Views.ManageView"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -197,6 +197,23 @@
                                     CommandParameter="{Binding}"
                                     Header="{x:Static res:Strings.Manage_Action_Update}"
                                     Icon="{ui:SymbolIcon ArrowDownload24}" />
+                                <Separator />
+                                <MenuItem
+                                    Command="{Binding PlacementTarget.Tag.CleanLeftoversCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                    CommandParameter="{Binding}"
+                                    Header="Clean Leftover Files"
+                                    Foreground="#f87171"
+                                    Icon="{ui:SymbolIcon Delete24}" />
+                                <MenuItem
+                                    Command="{Binding PlacementTarget.Tag.MoveStorageCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                    CommandParameter="{Binding}"
+                                    Header="Move Storage (Symlink)"
+                                    Icon="{ui:SymbolIcon FolderArrowRight24}" />
+                                <MenuItem
+                                    Command="{Binding PlacementTarget.Tag.ManageModsCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                    CommandParameter="{Binding}"
+                                    Header="Manage Mod Folders"
+                                    Icon="{ui:SymbolIcon Settings24}" />
                                 <MenuItem
                                     Command="{Binding PlacementTarget.Tag.RemoveDrmCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                     CommandParameter="{Binding}"
@@ -602,12 +619,14 @@
                          so a long blurb can't push the Actions block off the panel. -->
                     <ScrollViewer
                         Grid.Row="2"
+                        Grid.RowSpan="2"
                         Margin="0,14,0,0"
                         VerticalScrollBarVisibility="Auto">
-                        <StackPanel
-                            Margin="0,0,6,0"
-                            DataContext="{Binding DataContext.Overview, ElementName=Root}">
-                            <!-- Hidden until there's room for a few readable lines. This block sits in
+                        <StackPanel>
+                            <StackPanel
+                                Margin="0,0,6,0"
+                                DataContext="{Binding DataContext.Overview, ElementName=Root}">
+                                <!-- Hidden until there's room for a few readable lines. This block sits in
                                  the flyout's star row, so at the default window height it gets ~40px and
                                  renders one clipped line of blurb, which just looks broken.
 
@@ -697,11 +716,10 @@
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
                         </StackPanel>
-                    </ScrollViewer>
 
-                    <!-- Actions -->
-                    <StackPanel Grid.Row="3" Margin="0,16,0,0">
-                        <TextBlock
+                        <!-- Actions -->
+                        <StackPanel Margin="0,16,6,16">
+                            <TextBlock
                             Margin="0,0,0,8"
                             FontSize="13"
                             FontWeight="SemiBold"
@@ -742,11 +760,40 @@
                         <ui:Button
                             Margin="0,8,0,0"
                             HorizontalAlignment="Stretch"
+                            Command="{Binding DataContext.ManageAchievementsCommand, ElementName=Root}"
+                            CommandParameter="{Binding}"
+                            Content="🏆 Manage Achievements"
+                            Icon="{ui:SymbolIcon Trophy24}" />
+                        <ui:Button
+                            Margin="0,8,0,0"
+                            HorizontalAlignment="Stretch"
                             Command="{Binding DataContext.RemoveDrmCommand, ElementName=Root}"
                             CommandParameter="{Binding}"
                             Content="{x:Static res:Strings.Manage_Action_RemoveDrm}"
                             Icon="{ui:SymbolIcon WrenchScrewdriver24}"
                             IsEnabled="{Binding DataContext.NotBusy, ElementName=Root}" />
+                        <ui:Button
+                            Margin="0,8,0,0"
+                            HorizontalAlignment="Stretch"
+                            Command="{Binding DataContext.CleanLeftoversCommand, ElementName=Root}"
+                            CommandParameter="{Binding}"
+                            Content="Clean Leftover Files"
+                            Foreground="#f87171"
+                            Icon="{ui:SymbolIcon Delete24}" />
+                        <ui:Button
+                            Margin="0,8,0,0"
+                            HorizontalAlignment="Stretch"
+                            Command="{Binding DataContext.MoveStorageCommand, ElementName=Root}"
+                            CommandParameter="{Binding}"
+                            Content="Move Storage (Symlink)"
+                            Icon="{ui:SymbolIcon FolderArrowRight24}" />
+                        <ui:Button
+                            Margin="0,8,0,0"
+                            HorizontalAlignment="Stretch"
+                            Command="{Binding DataContext.ManageModsCommand, ElementName=Root}"
+                            CommandParameter="{Binding}"
+                            Content="Manage Mod Folders"
+                            Icon="{ui:SymbolIcon Settings24}" />
                         <UniformGrid Margin="0,8,0,0" Columns="2" Rows="2">
                             <ui:Button
                                 Margin="0,0,4,4"
@@ -785,7 +832,9 @@
                             Content="{x:Static res:Strings.Manage_DeleteThisLua}"
                             Foreground="#f87171"
                             Icon="{ui:SymbolIcon Delete24}" />
+                        </StackPanel>
                     </StackPanel>
+                    </ScrollViewer>
                 </Grid>
             </Border>
         </Grid>

@@ -1,0 +1,58 @@
+<ui:FluentWindow x:Class="LuaToolsGui.Views.ModFolderSelectorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        Title="Pilih Folder Mod"
+        Width="550" Height="450"
+        WindowStartupLocation="CenterScreen"
+        ExtendsContentIntoTitleBar="True"
+        WindowBackdropType="Mica"
+        Background="#1c1c22" Foreground="White"
+        ResizeMode="NoResize">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Title Bar -->
+        <ui:TitleBar Title="LuaTools Mod Manager" Grid.Row="0" Margin="0,0,0,10"/>
+
+        <!-- Content -->
+        <StackPanel Grid.Row="1" Margin="20,0,20,0">
+            <TextBlock Text="Pilih Tujuan Ekstrak Mod" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,5"/>
+            <TextBlock x:Name="SubtitleText" Text="Game: Unknown | Mod: Unknown" Foreground="#AAAAAA" Margin="0,0,0,20"/>
+
+            <TextBlock Text="Pilih dari riwayat folder:" FontWeight="SemiBold" Margin="0,0,0,10"/>
+            
+            <ListBox x:Name="PathsListBox" MaxHeight="120" Background="#2b2b36" BorderBrush="#3f3f4e" Foreground="White" Margin="0,0,0,10"
+                     SelectionChanged="PathsListBox_SelectionChanged">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding}" Padding="5"/>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <ui:Button Content="+ Tambah Direktori Baru..." Icon="FolderAdd24" Appearance="Secondary" 
+                       HorizontalAlignment="Left" Click="AddFolder_Click" Margin="0,0,0,20"/>
+
+            <CheckBox x:Name="RememberCheckBox" Content="Selalu gunakan folder ini untuk game ini (Jangan tanya lagi)" 
+                      Foreground="White" IsChecked="False"/>
+        </StackPanel>
+
+        <!-- Action Buttons -->
+        <Grid Grid.Row="2" Margin="20,20,20,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <ui:Button Grid.Column="1" Content="Batal" Appearance="Secondary" Margin="0,0,10,0" Width="100" Click="Cancel_Click"/>
+            <ui:Button Grid.Column="2" x:Name="ExtractButton" Content="Ekstrak Mod" Appearance="Primary" Width="130" Click="Extract_Click" IsEnabled="False"/>
+        </Grid>
+    </Grid>
+</ui:FluentWindow>

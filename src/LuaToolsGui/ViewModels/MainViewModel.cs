@@ -24,7 +24,8 @@ public partial class MainViewModel : ObservableObject
             .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
         var ver = info ?? Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "?";
         int plus = ver.IndexOf('+');
-        return plus >= 0 ? ver[..plus] : ver;
+        string baseVer = plus >= 0 ? ver[..plus] : ver;
+        return baseVer + " (Dev Version)";
     }
 
     [ObservableProperty]

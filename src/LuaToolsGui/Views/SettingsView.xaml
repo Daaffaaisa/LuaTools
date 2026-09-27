@@ -240,6 +240,59 @@
                 </StackPanel>
             </Border>
 
+                        <!-- Nexus Mods API key -->
+            <TextBlock Style="{StaticResource SectionHeader}" Text="Nexus Mods (Mod Manager Phase 1)" />
+            <Border Style="{StaticResource SettingsCard}">
+                <StackPanel Margin="14,12">
+                    <StackPanel Visibility="{Binding NexusIsKeyConfigured, Converter={StaticResource BoolToVis}}">
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:Button
+                                HorizontalAlignment="Left"
+                                Appearance="Secondary"
+                                Content="Connected to Nexus Mods"
+                                IsEnabled="False"
+                                Icon="{ui:SymbolIcon Checkmark24}" />
+                            <ui:Button
+                                Grid.Column="1"
+                                Command="{Binding ClearNexusKeyCommand}"
+                                Content="Clear API Key"
+                                Icon="{ui:SymbolIcon Dismiss24}" />
+                        </Grid>
+                    </StackPanel>
+
+                    <StackPanel Visibility="{Binding NexusIsKeyConfigured, Converter={StaticResource InverseBoolToVis}}">
+                        <TextBlock FontSize="13" FontWeight="Medium" Text="Personal API Key" />
+                        <TextBlock Margin="0,4,0,0" FontSize="12" Foreground="#6b7280" Text="Masukkan Personal API Key dari akun Nexus Mods milikmu untuk mengaktifkan fitur instalasi mod 1-klik." TextWrapping="Wrap" />
+                        <Grid Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBox
+                                FontFamily="Consolas"
+                                PlaceholderText="Misal: D_B4d_... (opsional untuk Phase 1)"
+                                Text="{Binding NexusKeyInput, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            <ui:Button
+                                Grid.Column="1"
+                                Margin="8,0,0,0"
+                                Appearance="Primary"
+                                Command="{Binding SaveNexusKeyCommand}"
+                                Content="Save Key" />
+                        </Grid>
+                        <TextBlock Margin="0,8,0,0" FontSize="12" Foreground="#22c55e" Text="{Binding NexusKeyStatus}" TextWrapping="Wrap" Visibility="{Binding NexusKeyStatus, Converter={StaticResource NullToCollapsed}}" />
+                        <TextBlock Margin="0,8,0,0" FontSize="12" Foreground="#6b7280">
+                            <Run Text="Dapatkan key di " />
+                            <Hyperlink NavigateUri="https://next.nexusmods.com/settings/api-keys" Foreground="#a78bfa">Nexus Mods Settings</Hyperlink>
+                        </TextBlock>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+
             <!-- Hubcap API key -->
             <TextBlock Style="{StaticResource SectionHeader}" Text="{x:Static res:Strings.Settings_Section_Hubcap}" />
             <Border Style="{StaticResource SettingsCard}">
@@ -396,48 +449,24 @@
             <!-- General (language) -->
             <TextBlock Style="{StaticResource SectionHeader}" Text="{x:Static res:Strings.Settings_Section_General}" />
             <Border Style="{StaticResource SettingsCard}">
-                <StackPanel>
-                    <!-- Language -->
-                    <StackPanel Margin="14,12">
-                        <TextBlock
-                            FontSize="13"
-                            FontWeight="Medium"
-                            Text="{x:Static res:Strings.Settings_Language}" />
-                        <ComboBox
-                            Margin="0,8,0,0"
-                            MinWidth="220"
-                            HorizontalAlignment="Left"
-                            DisplayMemberPath="Display"
-                            ItemsSource="{Binding LanguageOptions}"
-                            SelectedItem="{Binding SelectedLanguage}" />
-                        <TextBlock
-                            Margin="0,8,0,0"
-                            FontSize="12"
-                            Foreground="#6b7280"
-                            Text="{x:Static res:Strings.Settings_Language_Hint}"
-                            TextWrapping="Wrap" />
-                    </StackPanel>
-                    <Border Style="{StaticResource RowDivider}" />
-                    <!-- DNS resolution. Defaults to Automatic; see AppHttp for what each mode does. -->
-                    <StackPanel Margin="14,12">
-                        <TextBlock
-                            FontSize="13"
-                            FontWeight="Medium"
-                            Text="{x:Static res:Strings.Settings_Dns}" />
-                        <ComboBox
-                            Margin="0,8,0,0"
-                            MinWidth="220"
-                            HorizontalAlignment="Left"
-                            DisplayMemberPath="Display"
-                            ItemsSource="{Binding DnsModeOptions}"
-                            SelectedItem="{Binding SelectedDnsMode}" />
-                        <TextBlock
-                            Margin="0,8,0,0"
-                            FontSize="12"
-                            Foreground="#6b7280"
-                            Text="{x:Static res:Strings.Settings_Dns_Hint}"
-                            TextWrapping="Wrap" />
-                    </StackPanel>
+                <StackPanel Margin="14,12">
+                    <TextBlock
+                        FontSize="13"
+                        FontWeight="Medium"
+                        Text="{x:Static res:Strings.Settings_Language}" />
+                    <ComboBox
+                        Margin="0,8,0,0"
+                        MinWidth="220"
+                        HorizontalAlignment="Left"
+                        DisplayMemberPath="Display"
+                        ItemsSource="{Binding LanguageOptions}"
+                        SelectedItem="{Binding SelectedLanguage}" />
+                    <TextBlock
+                        Margin="0,8,0,0"
+                        FontSize="12"
+                        Foreground="#6b7280"
+                        Text="{x:Static res:Strings.Settings_Language_Hint}"
+                        TextWrapping="Wrap" />
                 </StackPanel>
             </Border>
 

@@ -1,0 +1,56 @@
+import os
+
+content = '''name: Auto-Pabrik Mod Manager
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    
+    steps:
+    - name: 1. Ambil kode pabrik kita (Checkout)
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: 2. Gabungkan dengan Update Dev Resmi
+      continue-on-error: true
+      run: |
+        git config user.name "Robot Pabrik"
+        git config user.email "robot@pabrik.com"
+        git remote add upstream https://github.com/madoiscool/LuaTools.git
+        git fetch upstream
+        git merge upstream/main --allow-unrelated-histories -m "Auto-Merge Update Resmi"
+        
+    - name: 3. Setup Mesin .NET 8
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+        
+    - name: 4. Install Velopack (Sistem Updater)
+      run: dotnet tool install -g vpk
+        
+    - name: 5. Build Aplikasi
+      run: dotnet publish src/LuaToolsGui/LuaToolsGui.csproj -c Release -r win-x64 -o publish_output
+      
+    - name: 6. Rakit Paket Auto-Update (Velopack)
+      run: vpk pack -u LuaTools -v 99.0.${{ github.run_number }} -p publish_output -o release_output
+      
+    - name: 7. Pajang di Halaman Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v99.0.${{ github.run_number }}
+        name: Update Mod Manager v99.0.${{ github.run_number }}
+        files: release_output/*
+'''
+
+os.makedirs(r'.github\workflows', exist_ok=True)
+with open(r'.github\workflows\auto-pabrik.yml', 'w', encoding='utf-8') as f:
+    f.write(content)
+print('Workflow file created successfully!')
