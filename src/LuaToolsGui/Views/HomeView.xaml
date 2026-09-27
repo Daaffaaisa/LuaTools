@@ -178,6 +178,56 @@
 
                     <Separator Margin="0,10" Background="#14FFFFFF" />
 
+                    <!-- Steam Account Switcher -->
+                    <Button Command="{Binding OpenAccountSwitcherCommand}" Style="{StaticResource StatusRowButton}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="22" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <ui:SymbolIcon
+                                Margin="0,1,0,0"
+                                VerticalAlignment="Center"
+                                FontSize="16"
+                                Foreground="#89b4fa"
+                                Symbol="Person24" />
+                            <TextBlock
+                                Grid.Column="1"
+                                Margin="10,0,0,0"
+                                VerticalAlignment="Center"
+                                FontSize="12.5"
+                                Foreground="#d1d5db"
+                                Text="🔄 Fast Account Switcher (Ganti Akun Steam)" />
+                        </Grid>
+                    </Button>
+
+                    <Separator Margin="0,10" Background="#14FFFFFF" />
+
+                    <!-- Game Suspender -->
+                    <Button Command="{Binding OpenGameSuspenderCommand}" Style="{StaticResource StatusRowButton}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="22" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <ui:SymbolIcon
+                                Margin="0,1,0,0"
+                                VerticalAlignment="Center"
+                                FontSize="16"
+                                Foreground="#cba6f7"
+                                Symbol="Pause24" />
+                            <TextBlock
+                                Grid.Column="1"
+                                Margin="10,0,0,0"
+                                VerticalAlignment="Center"
+                                FontSize="12.5"
+                                Foreground="#d1d5db"
+                                Text="❄️ Console-Style Game Suspender" />
+                        </Grid>
+                    </Button>
+
+                    <Separator Margin="0,10" Background="#14FFFFFF" />
+
                     <!-- Active mode → Mode -->
                     <Button Command="{Binding OpenModeCommand}" Style="{StaticResource StatusRowButton}">
                         <Grid>

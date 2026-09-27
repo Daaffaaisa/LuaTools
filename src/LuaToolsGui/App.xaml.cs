@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Threading;
 using LuaToolsGui.Models;
 using LuaToolsGui.Services;
@@ -17,12 +17,18 @@ public partial class App : Application
     // which means we auto-exit after the balloon so we don't leave a ghost tray icon behind.
     private bool _exitAfterSilentInstall;
 
+    // Menyimpan catatan kloningan mana saja yang sedang terbuka
+    private static readonly System.Collections.Generic.Dictionary<long, System.Diagnostics.Process> _activeSamWorkers = new();
+
     public App()
     {
         _host = Host.CreateDefaultBuilder()
             .ConfigureServices(services =>
             {
                 services.AddSingleton<SettingsService>();
+                services.AddSingleton<NexusModsService>();
+                services.AddSingleton<Services.ModExtractionService>();
+                services.AddSingleton<Services.ModRegistryService>();
                 services.AddSingleton<CacheService>();
                 services.AddSingleton<SteamService>();
                 services.AddSingleton<SteamAppListCache>();
@@ -89,6 +95,10 @@ public partial class App : Application
                 services.AddSingleton<PluginView>();
                 services.AddSingleton<SettingsView>();
                 services.AddSingleton<MainWindow>();
+                services.AddSingleton<SteamAchievementService>();
+                services.AddTransient<ViewModels.AchievementsViewModel>();
+                services.AddTransient<ViewModels.AccountSwitcherViewModel>();
+                services.AddTransient<ViewModels.GameSuspenderViewModel>();
             })
             .Build();
     }
@@ -225,11 +235,38 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+<<<<<<< ours
         // Point the shared HTTP handler at the DNS setting before anything makes a request. It calls
         // this per connection rather than reading it now, so the order is not load-bearing — but doing
         // it first means the very first call of the session already honours the user's choice.
         var dnsSettings = _host.Services.GetRequiredService<SettingsService>();
         AppHttp.ModeProvider = () => dnsSettings.DnsMode;
+=======
+        // Kloningan Shadow Clone masuk ke sini (MENCEGAH Host.StartAsync JALAN)
+        if (Program.SamWorkerAppId.HasValue)
+        {
+            var vm = _host.Services.GetRequiredService<ViewModels.AchievementsViewModel>();
+            var dialog = new Views.AchievementsWindow(vm, Program.SamWorkerAppId.Value, Program.SamWorkerGameName ?? "Game");
+            
+            // Jadikan ini window utama, dan bunuh diri saat ditutup
+            MainWindow = dialog;
+            dialog.Closed += (s, ev) => Environment.Exit(0);
+            
+            // Paksa jendela muncul paling depan
+            dialog.Loaded += (s, ev) => 
+            {
+                dialog.Activate();
+                dialog.Topmost = true;
+                dialog.Topmost = false;
+                dialog.Focus();
+            };
+
+            dialog.Show();
+            return; // Skip sisa inisialisasi aplikasi normal (Termasuk UAC dari Background Service)
+        }
+
+        await _host.StartAsync();
+>>>>>>> theirs
 
         // Legacy cleanup: older builds staged downloads in ~/Downloads/LuaTools (they now stage in
         // %TEMP% and self-delete). Remove any leftovers from that user-visible folder, best-effort.
@@ -247,8 +284,6 @@ public partial class App : Application
 
             Services.Downloads.HttpFileDownloader.SweepStale();
         });
-
-        await _host.StartAsync();
 
         // Rewrite any pre-3-mode SelectedMode BEFORE anything reads it. UnlockerService.SelectedMode
         // would otherwise parse a legacy value to null and quietly present an unconfigured app. Users
@@ -345,9 +380,64 @@ public partial class App : Application
 
         var manage = _host.Services.GetRequiredService<ManageViewModel>();
 
-        // Manage page "Update" → go to the Add page pre-seeded with that appid.
+        // Manage page sub-navigation
         manage.NavigateToAdd = appId =>
             Dispatcher.Invoke(() => { window.NavigateToAdd(); download.SeedSearch(appId); });
+
+        manage.OpenLeftoversCleaner = (tile) => Dispatcher.Invoke(() =>
+        {
+            var appInfo = _host.Services.GetRequiredService<Services.SteamAppInfoCache>();
+            var overview = appInfo.GetOverview(tile.AppId);
+            var vm = new ViewModels.LeftoverCleanerViewModel(tile, overview);
+            var dialog = new Views.LeftoverCleanerWindow(vm)
+            {
+                Owner = window
+            };
+            dialog.ShowDialog();
+        });
+
+        manage.OpenModSettings = (tile) => Dispatcher.Invoke(() =>
+        {
+            var settings = _host.Services.GetRequiredService<Services.SettingsService>();
+            var toastService = _host.Services.GetRequiredService<Services.ToastService>();
+            
+            // Coba tebak nama domain game dari nama game di Steam (karena SteamApp nggak nyimpen Nexus ID)
+            // Misal "Stardew Valley" -> "stardewvalley"
+            string guessDomain = tile.Name.Replace(" ", "").Replace(":", "").Replace("-", "").Replace("'", "").ToLower();
+            
+            if (!settings.ModDirectories.ContainsKey(guessDomain))
+            {
+                settings.ModDirectories[guessDomain] = new System.Collections.Generic.List<string>();
+            }
+            var registry = _host.Services.GetRequiredService<Services.ModRegistryService>();
+            var extractor = _host.Services.GetRequiredService<Services.ModExtractionService>();
+            
+            var dialog = new Views.ModDashboardWindow(guessDomain, settings, registry, extractor, toastService)
+            {
+                Owner = window
+            };
+            
+            dialog.ShowDialog();
+        });
+
+        manage.OpenStorageMover = (tile) => Dispatcher.Invoke(() =>
+        {
+            var steamLibrary = _host.Services.GetRequiredService<Services.SteamLibraryService>();
+            string? installDir = steamLibrary.GetInstallDir(tile.AppId);
+            
+            if (installDir is null || !System.IO.Directory.Exists(installDir))
+            {
+                System.Windows.MessageBox.Show("Folder instalasi game tidak ditemukan. Pastikan game masih terinstal.", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+
+            var vm = new ViewModels.SymlinkMoverViewModel(tile, installDir);
+            var dialog = new Views.SymlinkMoverWindow(vm)
+            {
+                Owner = window
+            };
+            dialog.ShowDialog();
+        });
 
         // Manage flyout "Manage Build" → go to the Builds page with that game selected.
         var builds = _host.Services.GetRequiredService<BuildsViewModel>();
@@ -363,6 +453,36 @@ public partial class App : Application
             dialog.ShowDialog();
         });
 
+        manage.OpenAchievements = (appId, name) => Dispatcher.Invoke(() =>
+        {
+            if (_activeSamWorkers.TryGetValue(appId, out var existingProcess))
+            {
+                if (!existingProcess.HasExited)
+                {
+                    var toast = _host.Services.GetRequiredService<ToastService>();
+                    toast.Show("Perhatian", "Achievement Manager untuk game ini sudah terbuka!", error: true);
+                    return;
+                }
+                else
+                {
+                    _activeSamWorkers.Remove(appId);
+                }
+            }
+
+            // Trik Kloning: Daripada buka window biasa, kita jalankan ulang aplikasi dengan flag khusus
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = System.Environment.ProcessPath!,
+                Arguments = $"--sam-worker {appId} \"{name}\"",
+                UseShellExecute = false // Mencegah munculnya popup UAC (Run as Administrator)
+            };
+            var process = System.Diagnostics.Process.Start(psi);
+            if (process != null)
+            {
+                _activeSamWorkers[appId] = process;
+            }
+        });
+
         // Steam regenerates appinfo.vdf from PICS, wiping launch edits. Check once at startup and
         // OFFER to re-apply, never silently, since applying closes Steam.
         _ = CheckLaunchOptionDriftAsync();
@@ -372,6 +492,26 @@ public partial class App : Application
             Dispatcher.Invoke(() => { window.NavigateToManage(); _ = manage.OpenDetailForAppIdAsync(appId); });
         var home = _host.Services.GetRequiredService<HomeViewModel>();
         home.NavigateToGame = openInManage;
+
+        home.OpenAccountSwitcherDialog = () => Dispatcher.Invoke(() =>
+        {
+            var vm = _host.Services.GetRequiredService<ViewModels.AccountSwitcherViewModel>();
+            var dialog = new Views.AccountSwitcherWindow(vm)
+            {
+                Owner = window
+            };
+            dialog.ShowDialog();
+        });
+
+        home.OpenGameSuspenderDialog = () => Dispatcher.Invoke(() =>
+        {
+            var vm = _host.Services.GetRequiredService<ViewModels.GameSuspenderViewModel>();
+            var dialog = new Views.GameSuspenderWindow(vm)
+            {
+                Owner = window
+            };
+            dialog.ShowDialog();
+        });
 
         // Deliberately NO queue-wide completion toast here. Every entry point already reports its own
         // outcome: Fixes toasts from ManifestJobFactory, the Add page shows its InstallStatus banner, the
@@ -532,9 +672,136 @@ public partial class App : Application
         }
     }
 
-    /// <summary>Route a luatools:// protocol URL to the appropriate page and action.</summary>
-    private void HandleProtocolUrl(string url)
+    /// <summary>Route a luatools:// or nxm:// protocol URL to the appropriate page and action.</summary>
+    private async void HandleProtocolUrl(string url)
     {
+        if (url.StartsWith("nxm://", StringComparison.OrdinalIgnoreCase))
+        {
+            var nxm = ProtocolService.ParseNxm(url);
+            if (nxm.Game != null)
+            {
+                var nexusService = _host.Services.GetRequiredService<Services.NexusModsService>();
+                var toastService = _host.Services.GetRequiredService<Services.ToastService>();
+                
+                toastService.Show("Nexus Mods", $"Menghubungi server Nexus untuk {nxm.Game} Mod ID {nxm.ModId}...");
+
+                var (cdnLink, _) = await nexusService.GetDownloadLinkAsync(nxm.Game, nxm.ModId, nxm.FileId, nxm.QueryParams);
+                
+                if (cdnLink != null)
+                {
+                    toastService.Show("Mendownload Mod...", $"Mod ID {nxm.ModId}\nSilakan tunggu di latar belakang.");
+                    
+                    // Actually download the file
+                    string? savedPath = await nexusService.DownloadModFileAsync(cdnLink);
+                    
+                    if (savedPath != null)
+                    {
+                        toastService.Show("Mengekstrak Mod...", $"Sedang memasang mod ke folder game...");
+                        
+                        var extractor = _host.Services.GetRequiredService<Services.ModExtractionService>();
+                        var settings = _host.Services.GetRequiredService<Services.SettingsService>();
+                        
+                        string? targetDirOverride = null;
+                        bool needsPrompt = true;
+
+                        if (settings.DefaultModDirectories.TryGetValue(nxm.Game, out string? defaultPath))
+                        {
+                            targetDirOverride = defaultPath;
+                            needsPrompt = false;
+                        }
+
+                        if (needsPrompt)
+                        {
+                            bool userCanceled = false;
+                            Dispatcher.Invoke(() =>
+                            {
+                                if (!settings.ModDirectories.ContainsKey(nxm.Game))
+                                {
+                                    settings.ModDirectories[nxm.Game] = new System.Collections.Generic.List<string>();
+                                }
+                                var availablePaths = settings.ModDirectories[nxm.Game];
+
+                                var dialog = new Views.ModFolderSelectorWindow(nxm.Game, nxm.ModId, availablePaths);
+                                if (dialog.ShowDialog() == true)
+                                {
+                                    targetDirOverride = dialog.SelectedPath;
+                                    settings.SaveModDirectory(nxm.Game, targetDirOverride, dialog.RememberChoice);
+                                }
+                                else
+                                {
+                                    userCanceled = true;
+                                }
+                            });
+
+                            if (userCanceled)
+                            {
+                                toastService.Show("Batal", "Pemasangan mod dibatalkan oleh pengguna.");
+                                return;
+                            }
+                        }
+
+                        toastService.Show("Mengekstrak Mod...", $"Sedang memasang mod...");
+                        var (success, errorMsg, extractPath, extractedFiles) = await extractor.ExtractModAsync(savedPath, nxm.Game, targetDirOverride);
+                        
+                        if (success && extractedFiles != null)
+                        {
+                            var registry = _host.Services.GetRequiredService<Services.ModRegistryService>();
+                            registry.RegisterMod(new Models.InstalledMod
+                            {
+                                Name = System.IO.Path.GetFileNameWithoutExtension(savedPath),
+                                GameDomain = nxm.Game,
+                                Source = "Nexus",
+                                NexusModId = nxm.ModId,
+                                InstalledFiles = extractedFiles
+                            });
+                        }
+                        
+                        Dispatcher.Invoke(() =>
+                        {
+                            if (success)
+                            {
+                                System.Windows.MessageBox.Show(
+                                    $"🎉 MOD BERHASIL DIPASANG! 🎉\n\n" +
+                                    $"File Mod telah sukses diekstrak.\n\n" +
+                                    $"Lokasi:\n{extractPath}\n\n" +
+                                    $"Fase 4 (Smart Extractor) Selesai!",
+                                    "LuaTools Mod Manager", 
+                                    System.Windows.MessageBoxButton.OK, 
+                                    System.Windows.MessageBoxImage.Information);
+                            }
+                            else
+                            {
+                                System.Windows.MessageBox.Show(
+                                    $"❌ GAGAL EKSTRAK MOD ❌\n\n" +
+                                    $"Alasan: {errorMsg}\n\n" +
+                                    $"File zip mentahnya masih aman di:\n{savedPath}",
+                                    "LuaTools Mod Manager", 
+                                    System.Windows.MessageBoxButton.OK, 
+                                    System.Windows.MessageBoxImage.Error);
+                            }
+                        });
+                    }
+                    else
+                    {
+                        toastService.Show("Download Gagal", "Gagal mengunduh file mod dari Nexus.", true);
+                    }
+                }
+                else
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        System.Windows.MessageBox.Show(
+                            $"❌ FASE 2 GAGAL! ❌\n\n" +
+                            $"Server Nexus Mods menolak koneksi.\nPastikan API Key kamu sudah tersimpan di Settings dengan benar!",
+                            "LuaTools Mod Manager", 
+                            System.Windows.MessageBoxButton.OK, 
+                            System.Windows.MessageBoxImage.Warning);
+                    });
+                }
+            }
+            return;
+        }
+
         var (action, appId, silent) = ProtocolService.Parse(url);
         if (action is null || appId is null) return;
 

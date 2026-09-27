@@ -21,6 +21,8 @@ public partial class HomeViewModel : ObservableObject
     public Action? NavigateToManage { get; set; }
     public Action? NavigateToSettings { get; set; }
     public Action? NavigateToMode { get; set; }
+    public Action? OpenAccountSwitcherDialog { get; set; }
+    public Action? OpenGameSuspenderDialog { get; set; }
 
     private readonly SteamService _steam;
     private readonly AuthService _auth;
@@ -96,6 +98,8 @@ public partial class HomeViewModel : ObservableObject
     [RelayCommand] private void OpenManage() => NavigateToManage?.Invoke();
     [RelayCommand] private void OpenSettings() => NavigateToSettings?.Invoke();
     [RelayCommand] private void OpenMode() => NavigateToMode?.Invoke();
+    [RelayCommand] private void OpenAccountSwitcher() => OpenAccountSwitcherDialog?.Invoke();
+    [RelayCommand] private void OpenGameSuspender() => OpenGameSuspenderDialog?.Invoke();
 
     /// <summary>Inline install of the store-page plugin from the Home tile (mirrors PluginViewModel.Install):
     /// confirm the Steam restart, install, toast the outcome, then refresh the tile.</summary>

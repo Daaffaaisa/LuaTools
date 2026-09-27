@@ -259,6 +259,7 @@ public partial class SettingsViewModel : ObservableObject
         _startWithWindows = settings.StartWithWindows; // default OFF. Init without triggering the registry write
         _minimizeToTray = settings.MinimizeToTray;
         _hubcapIsKeyConfigured = !string.IsNullOrEmpty(settings.HubcapApiKey);
+        _nexusIsKeyConfigured = !string.IsNullOrEmpty(settings.NexusApiKey);
 
         // Select the saved language (or "System default") without firing the restart prompt.
         _suppressLanguagePrompt = true;

@@ -40,6 +40,13 @@ public class AppSettings
     // The user's own Hubcap (hubcapmanifest.com) API key ("smm_…"). Null = not configured; key-gated
     // sources stay locked until set. Stored locally. The app calls Hubcap directly with it.
     public string? HubcapApiKey { get; set; }
+    public string? NexusApiKey { get; set; }
+    
+    // Maps a Nexus game domain (e.g. "stardewvalley") to a list of known mod directories (e.g. UE4SS vs ~mods)
+    public System.Collections.Generic.Dictionary<string, System.Collections.Generic.List<string>> ModDirectories { get; set; } = new();
+    
+    // Maps a Nexus game domain to its chosen default directory (bypasses prompt)
+    public System.Collections.Generic.Dictionary<string, string> DefaultModDirectories { get; set; } = new();
 
     // When true, register the app to launch on Windows sign-in (HKCU …\Run). Nullable so "never set"
     // (→ default OFF) is distinguishable from an explicit choice.
@@ -131,10 +138,38 @@ public class SettingsService
     }
 
     /// <summary>The user's Hubcap API key ("smm_…"), or null if not configured.</summary>
-    public string? HubcapApiKey
+public string? HubcapApiKey
     {
         get => _settings.HubcapApiKey;
         set { _settings.HubcapApiKey = string.IsNullOrWhiteSpace(value) ? null : value; Save(); }
+    }
+
+    public System.Collections.Generic.Dictionary<string, System.Collections.Generic.List<string>> ModDirectories => _settings.ModDirectories;
+    public System.Collections.Generic.Dictionary<string, string> DefaultModDirectories => _settings.DefaultModDirectories;
+    
+    public void SaveModDirectory(string gameDomain, string path, bool isDefault)
+    {
+        if (!_settings.ModDirectories.ContainsKey(gameDomain))
+        {
+            _settings.ModDirectories[gameDomain] = new System.Collections.Generic.List<string>();
+        }
+        
+        if (!_settings.ModDirectories[gameDomain].Contains(path))
+        {
+            _settings.ModDirectories[gameDomain].Add(path);
+        }
+        
+        if (isDefault)
+        {
+            _settings.DefaultModDirectories[gameDomain] = path;
+        }
+        Save();
+    }
+
+    public string? NexusApiKey
+    {
+        get => _settings.NexusApiKey;
+        set { _settings.NexusApiKey = string.IsNullOrWhiteSpace(value) ? null : value; Save(); }
     }
 
     /// <summary>When true, the app is registered to launch on Windows sign-in (default OFF).</summary>

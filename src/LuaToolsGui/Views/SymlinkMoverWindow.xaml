@@ -1,0 +1,84 @@
+<ui:FluentWindow x:Class="LuaToolsGui.Views.SymlinkMoverWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+        xmlns:viewmodels="clr-namespace:LuaToolsGui.ViewModels"
+        d:DataContext="{d:DesignInstance Type=viewmodels:SymlinkMoverViewModel}"
+        mc:Ignorable="d"
+        Title="Smart Storage Mover"
+        Width="500"
+        Height="420"
+        WindowStartupLocation="CenterOwner"
+        ExtendsContentIntoTitleBar="True"
+        WindowBackdropType="None"
+        Background="#1c1c22" Foreground="White"
+        ResizeMode="NoResize">
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <ui:TitleBar Grid.Row="0" Title="Smart Storage Mover" />
+
+        <StackPanel Grid.Row="1" Margin="24,12,24,24">
+            
+            <TextBlock Text="Pindahkan game ke drive lain tanpa merusak deteksi Steam/Epic Games menggunakan NTFS Junction (Symlink)." 
+                       TextWrapping="Wrap" 
+                       Foreground="#a1a1aa" 
+                       Margin="0,0,0,16"/>
+
+            <!-- Game Info -->
+            <Border Background="#11ffffff" 
+                    BorderBrush="#2a2a35" 
+                    BorderThickness="1" 
+                    CornerRadius="8" 
+                    Padding="16" 
+                    Margin="0,0,0,16">
+                <StackPanel>
+                    <TextBlock Text="{Binding GameName}" FontWeight="Bold" FontSize="16" Margin="0,0,0,4"/>
+                    <TextBlock Text="{Binding CurrentPath}" Foreground="#a1a1aa" FontSize="12" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding TotalSizeString, StringFormat='Ukuran Total: {0}'}" FontSize="13" Foreground="#81818a"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Destination Selection -->
+            <TextBlock Text="Lokasi Baru (Tujuan):" FontWeight="SemiBold" Margin="0,0,0,8"/>
+            <Grid Margin="0,0,0,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <ui:TextBox Grid.Column="0" Text="{Binding DestinationPath}" IsReadOnly="True" PlaceholderText="C:\Games Baru..." Margin="0,0,8,0" Background="#2a2a35" Foreground="White" BorderThickness="0"/>
+                <ui:Button Grid.Column="1" Content="Browse..." Command="{Binding BrowseDestinationCommand}" IsEnabled="{Binding IsNotMoving}" Background="#3b82f6" Foreground="White" BorderThickness="0" Cursor="Hand"/>
+            </Grid>
+
+            <!-- Progress & Status -->
+            <StackPanel Margin="0,8,0,16">
+                <TextBlock Text="{Binding StatusMessage}" Foreground="#a1a1aa" Margin="0,0,0,8" TextWrapping="Wrap"/>
+                <ProgressBar Value="{Binding ProgressPercentage}" Minimum="0" Maximum="100" Height="4" Visibility="{Binding IsMoving, Converter={StaticResource BoolToVis}}" Foreground="#3b82f6"/>
+            </StackPanel>
+
+            <!-- Actions -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <ui:Button Content="Batal" 
+                           Margin="0,0,8,0" 
+                           Click="Cancel_Click"
+                           Background="#3f3f46" Foreground="White" BorderThickness="0" Cursor="Hand"
+                           IsEnabled="{Binding IsNotMoving}"/>
+                <ui:Button Content="Pindahkan &amp; Symlink" 
+                           Command="{Binding StartMoveCommand}"
+                           IsEnabled="{Binding CanMove}"
+                           Background="#22c55e" Foreground="White" BorderThickness="0" Cursor="Hand"
+                           Icon="{ui:SymbolIcon ArrowRight24}"/>
+            </StackPanel>
+        </StackPanel>
+    </Grid>
+</ui:FluentWindow>
