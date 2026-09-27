@@ -17,7 +17,14 @@ jobs:
       with:
         fetch-depth: 0
         
-    # Langkah Merge Sementara dimatikan dulu untuk rilis perdana
+    - name: 2. Smart Auto-Merge Update Dev Resmi
+      run: |
+        git config user.name "Robot Pabrik"
+        git config user.email "robot@pabrik.com"
+        git remote add upstream https://github.com/madoiscool/LuaTools.git
+        git fetch upstream
+        git merge upstream/main -m "Auto-Merge Update Resmi" || git merge --abort
+
     - name: 3. Setup Mesin .NET 8
       uses: actions/setup-dotnet@v4
       with:
@@ -30,7 +37,7 @@ jobs:
       run: dotnet publish src/LuaToolsGui/LuaToolsGui.csproj -c Release -r win-x64 -o publish_output
       
     - name: 6. Rakit Paket Auto-Update (Velopack)
-      run: vpk pack -u LuaTools -v 99.0.${{ github.run_number }} -p publish_output -o release_output
+      run: vpk pack -u LuaToolsDev -v 99.0.${{ github.run_number }} -p publish_output -o release_output --mainExe LuaToolsDev.exe
       
     - name: 7. Pajang di Halaman Release
       uses: softprops/action-gh-release@v1
