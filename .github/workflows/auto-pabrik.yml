@@ -17,7 +17,14 @@ jobs:
       with:
         fetch-depth: 0
         
-    # Langkah Merge Sementara dimatikan dulu untuk rilis perdana
+    - name: 2. Smart Auto-Merge Update Dev Resmi
+      run: |
+        git config user.name "Robot Pabrik"
+        git config user.email "robot@pabrik.com"
+        git remote add upstream https://github.com/madoiscool/LuaTools.git
+        git fetch upstream
+        git merge upstream/main -m "Auto-Merge Update Resmi" || git merge --abort
+
     - name: 3. Setup Mesin .NET 8
       uses: actions/setup-dotnet@v4
       with:
