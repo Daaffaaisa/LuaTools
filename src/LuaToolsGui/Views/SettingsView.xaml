@@ -286,7 +286,7 @@
                         <TextBlock Margin="0,8,0,0" FontSize="12" Foreground="#22c55e" Text="{Binding NexusKeyStatus}" TextWrapping="Wrap" Visibility="{Binding NexusKeyStatus, Converter={StaticResource NullToCollapsed}}" />
                         <TextBlock Margin="0,8,0,0" FontSize="12" Foreground="#6b7280">
                             <Run Text="Dapatkan key di " />
-                            <Hyperlink NavigateUri="https://next.nexusmods.com/settings/api-keys" Foreground="#a78bfa">Nexus Mods Settings</Hyperlink>
+                            <Hyperlink NavigateUri="https://next.nexusmods.com/settings/api-keys" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#a78bfa">Nexus Mods Settings</Hyperlink>
                         </TextBlock>
                     </StackPanel>
                 </StackPanel>

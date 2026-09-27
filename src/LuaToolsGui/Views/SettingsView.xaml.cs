@@ -14,4 +14,10 @@ public partial class SettingsView : UserControl
         _vm = viewModel;
         Loaded += (_, _) => _vm.OnViewLoaded();
     }
+
+    private void Hyperlink_RequestNavigate(object sender, System.Windows.Navigation.RequestNavigateEventArgs e)
+    {
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+        e.Handled = true;
+    }
 }
