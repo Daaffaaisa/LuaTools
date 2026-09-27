@@ -377,8 +377,8 @@ public class CefInjectorService : IHostedService
         // GitHub releases into %AppData%\LuaToolsGui\plugin. If it isn't installed yet, nothing injects.
         string[] candidates =
         {
-            Path.Combine(appData, "LuaToolsGui", "plugin", "public", "luatools.js"),
-            Path.Combine(appData, "LuaToolsGui", "plugin", "luatools.js"),
+            Path.Combine(appData, "LuaToolsGuiDev", "plugin", "public", "luatools.js"),
+            Path.Combine(appData, "LuaToolsGuiDev", "plugin", "luatools.js"),
         };
         foreach (var path in candidates)
             if (File.Exists(path)) return path;

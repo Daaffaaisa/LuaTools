@@ -69,7 +69,7 @@ public static class Program
 
         // Only one instance may run: two copies share %AppData%\LuaToolsGui (auth.dat,
         // caches) and would lock each other's files (e.g. a token write failing on login).
-        using var single = new Mutex(initiallyOwned: true, "LuaToolsGui.SingleInstance", out bool isFirst);
+        using var single = new Mutex(initiallyOwned: true, "LuaToolsGuiDev.SingleInstance", out bool isFirst);
         if (!isFirst)
         {
             // Launched from a browser protocol link → write the URL to a temp file so the live
@@ -275,7 +275,7 @@ public static class Program
         {
             string path = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "LuaToolsGui", "settings.json");
+                "LuaToolsGuiDev", "settings.json");
             if (!File.Exists(path)) return null;
 
             using var doc = JsonDocument.Parse(File.ReadAllText(path));

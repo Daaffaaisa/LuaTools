@@ -16,7 +16,7 @@ public class ModRegistryService
 
     public ModRegistryService()
     {
-        string appData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "LuaTools");
+        string appData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "LuaToolsDev");
         Directory.CreateDirectory(appData);
         _registryFilePath = Path.Combine(appData, "mods_registry.json");
         Load();
