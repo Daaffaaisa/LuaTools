@@ -18,28 +18,44 @@ jobs:
         fetch-depth: 0
         
     - name: 2. Smart Auto-Merge Update Dev Resmi
+      id: automerge
+      shell: bash
       run: |
         git config user.name "Robot Pabrik"
         git config user.email "robot@pabrik.com"
         git remote add upstream https://github.com/madoiscool/LuaTools.git
         git fetch upstream
+        
+        BEFORE=$(git rev-parse HEAD)
         git merge upstream/main -m "Auto-Merge Update Resmi" || git merge --abort
+        AFTER=$(git rev-parse HEAD)
+        
+        if [ "$BEFORE" != "$AFTER" ] || [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          echo "should_build=true" >> $GITHUB_OUTPUT
+        else
+          echo "should_build=false" >> $GITHUB_OUTPUT
+        fi
 
     - name: 3. Setup Mesin .NET 8
+      if: steps.automerge.outputs.should_build == 'true'
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '8.0.x'
         
     - name: 4. Install Velopack (Sistem Updater)
+      if: steps.automerge.outputs.should_build == 'true'
       run: dotnet tool install -g vpk
         
     - name: 5. Build Aplikasi
+      if: steps.automerge.outputs.should_build == 'true'
       run: dotnet publish src/LuaToolsGui/LuaToolsGui.csproj -c Release -r win-x64 -o publish_output
       
     - name: 6. Rakit Paket Auto-Update (Velopack)
+      if: steps.automerge.outputs.should_build == 'true'
       run: vpk pack -u LuaToolsDev -v 99.0.${{ github.run_number }} -p publish_output -o release_output --mainExe LuaToolsDev.exe
       
     - name: 7. Pajang di Halaman Release
+      if: steps.automerge.outputs.should_build == 'true'
       uses: softprops/action-gh-release@v1
       with:
         tag_name: v99.0.${{ github.run_number }}
