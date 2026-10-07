@@ -73,6 +73,19 @@ public class GcwScraperService
             if (fileMatch.Success)
             {
                 var title = Uri.UnescapeDataString(fileMatch.Groups[1].Value).Replace(".", " ");
+                var titleLower = title.ToLowerInvariant();
+                
+                // Exclude trainers and cheats since we only want fixes
+                if (titleLower.Contains("trainer") || 
+                    titleLower.Contains("cheat") || 
+                    titleLower.Contains("promo") || 
+                    titleLower.Contains("editor") || 
+                    titleLower.Contains("savegame") || 
+                    titleLower.Contains("unlocker"))
+                {
+                    continue;
+                }
+
                 if (!results.Any(x => x.Title == title))
                 {
                     results.Add(new GcwFixItem {
