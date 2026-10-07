@@ -58,7 +58,7 @@ jobs:
       
     - name: 7. Pajang di Halaman Release
       if: steps.automerge.outputs.should_build == 'true'
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         tag_name: v99.0.${{ github.run_number }}
         name: Update Mod Manager v99.0.${{ github.run_number }}
