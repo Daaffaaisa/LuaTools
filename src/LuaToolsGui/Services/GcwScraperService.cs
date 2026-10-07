@@ -45,11 +45,11 @@ public class GcwScraperService
 
         var results = new List<GcwFixItem>();
         // cbox('https://dl.gamecopyworld.com/?c=19330&d=2026&f=Crimson.Desert.v1.0.Trainer-FLiNG!rar')
-        var dlMatches = Regex.Matches(gameHtml, @"cbox\('([^']+dl\.gamecopyworld\.com[^']+)'\)", RegexOptions.IgnoreCase);
+        var dlMatches = Regex.Matches(gameHtml, @"cbox\('([^']+dl\.gamecopyworld\.com[^']+)'\s*\)", RegexOptions.IgnoreCase);
 
         foreach (Match m in dlMatches)
         {
-            var mirrorUrl = m.Groups[1].Value;
+            var mirrorUrl = m.Groups[1].Value.Replace("&amp;", "&");
             var fileMatch = Regex.Match(mirrorUrl, @"&f=([^!&]+)");
             if (fileMatch.Success)
             {
