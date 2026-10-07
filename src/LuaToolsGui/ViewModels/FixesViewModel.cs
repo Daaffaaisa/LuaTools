@@ -209,7 +209,101 @@ public partial class FixesViewModel : PagedListViewModel<FixGameCardVm>
     }
 
     // ── Detail flyout ───────────────────────────────────────────────
+
+    // --- GCW Fix Finder ---
+    [ObservableProperty] private string _gcwSearchTitle = "";
+    [ObservableProperty] private bool _isSearchingGcw;
+    public System.Collections.ObjectModel.ObservableCollection<LuaToolsGui.Models.GcwFixItem> GcwFixes { get; } = new();
+
+    [CommunityToolkit.Mvvm.Input.RelayCommand]
+    private async System.Threading.Tasks.Task SearchGcw()
+    {
+        if (string.IsNullOrWhiteSpace(GcwSearchTitle)) return;
+        IsSearchingGcw = true;
+        GcwFixes.Clear();
+        try
+        {
+            var scraper = new LuaToolsGui.Services.GcwScraperService(new System.Net.Http.HttpClient());
+            var results = await scraper.SearchFixesAsync(GcwSearchTitle);
+            foreach(var item in results) GcwFixes.Add(item);
+            
+            if (results.Count == 0)
+                toast.Show("GCW", "Fix tidak ditemukan di GameCopyWorld", error: true);
+        }
+        catch (System.Exception ex)
+        {
+            toast.Show("Error GCW", "Gagal scraping: " + ex.Message, error: true);
+        }
+        finally
+        {
+            IsSearchingGcw = false;
+        }
+    }
+
+    [CommunityToolkit.Mvvm.Input.RelayCommand]
+    private async System.Threading.Tasks.Task DownloadGcwFix(LuaToolsGui.Models.GcwFixItem fix)
+    {
+        if (SelectedGame is not { } game) return;
+
+        toast.Show("GCW", "Mencari link direct download...");
+        IsSearchingGcw = true;
+        
+        try
+        {
+            var httpClient = new System.Net.Http.HttpClient();
+            var scraper = new LuaToolsGui.Services.GcwScraperService(httpClient);
+            
+            string finalArchiveUrl = await scraper.GetDirectDownloadUrlAsync(fix.MirrorPageUrl);
+            
+            toast.Show("GCW", "Mendownload file archive...");
+            string tempFile = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "gcw_fix_" + System.Guid.NewGuid() + ".rar");
+            
+            var req = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Get, finalArchiveUrl);
+            req.Headers.TryAddWithoutValidation("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36");
+            req.Headers.TryAddWithoutValidation("Referer", fix.MirrorPageUrl);
+            
+            using var res = await httpClient.SendAsync(req, System.Net.Http.HttpCompletionOption.ResponseHeadersRead);
+            res.EnsureSuccessStatusCode();
+            
+            using (var fs = new System.IO.FileStream(tempFile, System.IO.FileMode.Create))
+            {
+                await res.Content.CopyToAsync(fs);
+            }
+            
+            toast.Show("GCW", "Mengekstrak fix ke folder game...");
+            var extractor = new LuaToolsGui.Services.ModExtractionService(library, settings);
+            
+            string targetDir = null;
+            if (long.TryParse(game.AppId, out long appId))
+            {
+                targetDir = library.GetInstallDir(appId);
+            }
+
+            var (success, errorMsg, extractPath, extractedFiles) = await extractor.ExtractModAsync(tempFile, "GCW", targetDir);
+            
+            if (success)
+            {
+                toast.Show("GCW Berhasil!", $"Fix berhasil dipasang ke game!");
+            }
+            else
+            {
+                toast.Show("GCW Ekstrak Gagal", errorMsg ?? "Unknown error", error: true);
+            }
+            
+            try { System.IO.File.Delete(tempFile); } catch { }
+        }
+        catch (System.Exception ex)
+        {
+            toast.Show("Error GCW", "Gagal mendownload fix: " + ex.Message, error: true);
+        }
+        finally
+        {
+            IsSearchingGcw = false;
+        }
+    }
+
     [ObservableProperty]
+
     [NotifyPropertyChangedFor(nameof(IsDetailOpen))]
     private FixGameCardVm? _selectedGame;
 
@@ -356,6 +450,8 @@ public partial class FixesViewModel : PagedListViewModel<FixGameCardVm>
     {
         SelectedGame = game;
         _ = game.EnsureCoverAsync(covers); // ensure the flyout header image is cached too
+        GcwSearchTitle = LuaToolsGui.Services.GameTitleSanitizer.Sanitize(game.Name);
+        GcwFixes.Clear();
         Fixes.Clear();
         _allFixes = [];
         FixTags.Clear();
