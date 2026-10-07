@@ -19,20 +19,39 @@ public class GcwScraperService
 
     public async Task<List<GcwFixItem>> SearchFixesAsync(string gameTitle)
     {
-        // 1. Fetch GCW index
-        var indexRequest = new HttpRequestMessage(HttpMethod.Get, "https://gamecopyworld.com/games/gcw_index.shtml");
-        indexRequest.Headers.TryAddWithoutValidation("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
-        indexRequest.Headers.TryAddWithoutValidation("Referer", "https://gamecopyworld.com/");
+        // 1. Determine primary index file based on first letter
+        char firstChar = char.ToUpperInvariant(gameTitle.Trim().FirstOrDefault());
+        string primaryIndex = "gcw_index.shtml";
+        if (firstChar >= 'F' && firstChar <= 'M') primaryIndex = "gcw_index_2.shtml";
+        else if (firstChar >= 'N' && firstChar <= 'S') primaryIndex = "gcw_index_3.shtml";
+        else if (firstChar >= 'T' && firstChar <= 'Z') primaryIndex = "gcw_index_4.shtml";
 
-        using var indexRes = await _httpClient.SendAsync(indexRequest, HttpCompletionOption.ResponseHeadersRead);
-        indexRes.EnsureSuccessStatusCode();
-        var indexHtml = await indexRes.Content.ReadAsStringAsync();
+        string[] allIndexes = { "gcw_index.shtml", "gcw_index_2.shtml", "gcw_index_3.shtml", "gcw_index_4.shtml" };
+        var indexesToSearch = new List<string> { primaryIndex };
+        indexesToSearch.AddRange(allIndexes.Where(x => x != primaryIndex));
 
-        // 2. Find game page link
-        var pageMatch = Regex.Match(indexHtml, $@"<a href=""([^""]+)"">[^<]*{Regex.Escape(gameTitle)}[^<]*</a>", RegexOptions.IgnoreCase);
-        if (!pageMatch.Success) return new List<GcwFixItem>();
+        string gameUrl = null;
 
-        string gameUrl = "https://gamecopyworld.com/games/" + pageMatch.Groups[1].Value;
+        foreach (var idx in indexesToSearch)
+        {
+            var indexRequest = new HttpRequestMessage(HttpMethod.Get, $"https://gamecopyworld.com/games/{idx}");
+            indexRequest.Headers.TryAddWithoutValidation("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+            indexRequest.Headers.TryAddWithoutValidation("Referer", "https://gamecopyworld.com/");
+
+            using var indexRes = await _httpClient.SendAsync(indexRequest, HttpCompletionOption.ResponseHeadersRead);
+            if (!indexRes.IsSuccessStatusCode) continue;
+
+            var indexHtml = await indexRes.Content.ReadAsStringAsync();
+            var pageMatch = Regex.Match(indexHtml, $@"<a href=""([^""]+)"">[^<]*{Regex.Escape(gameTitle)}[^<]*</a>", RegexOptions.IgnoreCase);
+            
+            if (pageMatch.Success)
+            {
+                gameUrl = "https://gamecopyworld.com/games/" + pageMatch.Groups[1].Value;
+                break;
+            }
+        }
+
+        if (gameUrl == null) return new List<GcwFixItem>();
         
         // 3. Fetch game page
         var gameReq = new HttpRequestMessage(HttpMethod.Get, gameUrl);
