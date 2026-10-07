@@ -592,8 +592,8 @@
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <ui:TextBox Grid.Column="0" Text="{Binding GcwSearchTitle, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Sanitized Game Title..." Margin="0,0,8,0"/>
-                                    <ui:Button Grid.Column="1" Content="Search GCW" Icon="{ui:SymbolIcon Search24}" Command="{Binding SearchGcwCommand}" Appearance="Primary" />
+                                    <ui:TextBox Grid.Column="0" Text="{Binding GcwSearchTitle, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Cari judul game manual..." Margin="0,0,8,0" Visibility="{Binding IsGcwManualSearchVisible, Converter={StaticResource BoolToVis}}" />
+                                    <ui:Button Grid.Column="1" Content="Search in GCW" Icon="{ui:SymbolIcon Search24}" Command="{Binding SearchGcwCommand}" Appearance="Primary" />
                                 </Grid>
                                 
                                 <StackPanel Orientation="Horizontal" Visibility="{Binding IsSearchingGcw, Converter={StaticResource BoolToVis}}" Margin="0,0,0,10">
@@ -677,3 +677,4 @@
         </Grid>
     </Grid>
 </UserControl>
+

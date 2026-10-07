@@ -1,13 +1,10 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 using LuaToolsGui.Services;
-using LuaToolsGui.Models;
+using System;
 
 namespace LuaToolsGui.Tests;
 
@@ -15,69 +12,86 @@ public class GcwScraperServiceTests
 {
     private sealed class StubHandler : HttpMessageHandler
     {
-        private readonly string _body;
+        private readonly Func<HttpRequestMessage, string> _route;
         public int Calls { get; private set; }
         public HttpRequestMessage? LastRequest { get; private set; }
 
-        public StubHandler(string body)
+        public StubHandler(Func<HttpRequestMessage, string> route)
         {
-            _body = body;
+            _route = route;
         }
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
             Calls++;
             LastRequest = request;
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(_body) });
+            var body = _route(request);
+            if (body == null) return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body) });
         }
     }
 
     [Fact]
     public async Task SearchFixesAsync_ParsesGameCopyWorldHtmlAndReturnsFixItems()
     {
-        // Arrange: Fake HTML that mimics a GCW search result page
-        var fakeHtml = """
-        <html>
-        <body>
-            <table class="gcw-list">
-                <tr>
-                    <td class="item-title"><a href="/games/cyberpunk_2077.shtml#v1.12">Cyberpunk 2077 v1.12 [MULTI] Fixed EXE</a></td>
-                    <td class="item-date">01-Jan-2023</td>
-                    <td class="item-size">14 MB</td>
-                </tr>
-            </table>
-        </body>
-        </html>
+        // Arrange: Fake HTML that mimics real GCW structure (Index -> Game Page -> Mirrors)
+        var indexHtml = """
+        <html><body>
+            <a href="pc_crimson_desert.shtml">Crimson Desert</a>
+            <a href="pc_other_game.shtml">Other Game</a>
+        </body></html>
         """;
-        var handler = new StubHandler(fakeHtml);
+
+        var gameHtml = """
+        <html><body>
+            <a href='enable_javascript.shtml' onMouseDown="cbox('https://dl.gamecopyworld.com/?c=19330&d=2026&f=Crimson.Desert.v1.0.Trainer-FLiNG!rar'); return false;">MIRROR #01</a>
+            <a href='enable_javascript.shtml' onMouseDown="cbox('https://dl.gamecopyworld.com/?c=19330&d=2026&f=Crimson.Desert.Fix!rar'); return false;">MIRROR #02</a>
+        </body></html>
+        """;
+
+        var handler = new StubHandler(req => 
+        {
+            if (req.RequestUri!.ToString().Contains("gcw_index.shtml")) return indexHtml;
+            if (req.RequestUri!.ToString().Contains("pc_crimson_desert.shtml")) return gameHtml;
+            return null!;
+        });
         var client = new HttpClient(handler);
         var service = new GcwScraperService(client);
 
         // Act
-        var results = await service.SearchFixesAsync("Cyberpunk 2077");
+        var results = await service.SearchFixesAsync("Crimson Desert");
 
         // Assert
-        Assert.Single(results);
-        Assert.Equal("Cyberpunk 2077 v1.12 [MULTI] Fixed EXE", results[0].Title);
-        Assert.Equal("01-Jan-2023", results[0].DateLabel);
-        Assert.Equal("14 MB", results[0].Size);
-        Assert.Equal("https://gamecopyworld.com/games/cyberpunk_2077.shtml#v1.12", results[0].MirrorPageUrl);
+        Assert.Equal(2, results.Count);
         
-        // Ensure proper User-Agent was sent to bypass basic blocks
-        Assert.Contains("Windows NT 10.0", handler.LastRequest!.Headers.UserAgent.ToString());
+        Assert.Equal("Crimson Desert v1 0 Trainer-FLiNG", results[0].Title);
+        Assert.Equal("https://dl.gamecopyworld.com/?c=19330&d=2026&f=Crimson.Desert.v1.0.Trainer-FLiNG!rar", results[0].MirrorPageUrl);
+        Assert.Equal("Unknown", results[0].DateLabel);
+
+        Assert.Equal("Crimson Desert Fix", results[1].Title);
+        Assert.Equal("https://dl.gamecopyworld.com/?c=19330&d=2026&f=Crimson.Desert.Fix!rar", results[1].MirrorPageUrl);
+        
+        Assert.Equal(2, handler.Calls); // Index + Game page
     }
 
     [Fact]
     public async Task GetDirectDownloadUrlAsync_ResolvesMirrorAndReturnsArchiveUrl()
     {
-        var fakeMirrorHtml = "<html><body><div id=\"download_link\"><a href=\"http://fake-mirror.com/fix.rar\">Click Here</a></div></body></html>";
-        var handler = new StubHandler(fakeMirrorHtml);
+        // The mirror page on dl.gamecopyworld.com contains the actual g1.gamecopyworld.com mirror link
+        var mirrorHtml = """
+        <html><body>
+            <a href="https://g1.gamecopyworld.com/?y=encoded_payload" rel="nofollow">MIRROR #01</a>
+        </body></html>
+        """;
+        var handler = new StubHandler(_ => mirrorHtml);
         var client = new HttpClient(handler);
         var service = new GcwScraperService(client);
 
-        var url = await service.GetDirectDownloadUrlAsync("https://gamecopyworld.com/games/mirror.shtml");
-        
-        Assert.Equal("http://fake-mirror.com/fix.rar", url);
+        // Act
+        var result = await service.GetDirectDownloadUrlAsync("https://dl.gamecopyworld.com/?c=123&f=test!rar");
+
+        // Assert
+        Assert.Equal("https://g1.gamecopyworld.com/?y=encoded_payload", result);
+        Assert.Equal("https://dl.gamecopyworld.com/?c=123&f=test!rar", handler.LastRequest!.Headers.Referrer?.ToString());
     }
 }
-

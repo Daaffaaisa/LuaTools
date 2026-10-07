@@ -213,6 +213,7 @@ public partial class FixesViewModel : PagedListViewModel<FixGameCardVm>
     // --- GCW Fix Finder ---
     [ObservableProperty] private string _gcwSearchTitle = "";
     [ObservableProperty] private bool _isSearchingGcw;
+    [ObservableProperty] private bool _isGcwManualSearchVisible;
     public System.Collections.ObjectModel.ObservableCollection<LuaToolsGui.Models.GcwFixItem> GcwFixes { get; } = new();
 
     [CommunityToolkit.Mvvm.Input.RelayCommand]
@@ -228,7 +229,14 @@ public partial class FixesViewModel : PagedListViewModel<FixGameCardVm>
             foreach(var item in results) GcwFixes.Add(item);
             
             if (results.Count == 0)
-                toast.Show("GCW", "Fix tidak ditemukan di GameCopyWorld", error: true);
+            {
+                IsGcwManualSearchVisible = true;
+                toast.Show("GCW", "Fix otomatis tidak ditemukan. Silakan edit judul dan coba lagi.", error: true);
+            }
+            else
+            {
+                IsGcwManualSearchVisible = false;
+            }
         }
         catch (System.Exception ex)
         {
@@ -452,6 +460,7 @@ public partial class FixesViewModel : PagedListViewModel<FixGameCardVm>
         _ = game.EnsureCoverAsync(covers); // ensure the flyout header image is cached too
         GcwSearchTitle = LuaToolsGui.Services.GameTitleSanitizer.Sanitize(game.Name);
         GcwFixes.Clear();
+        IsGcwManualSearchVisible = false;
         Fixes.Clear();
         _allFixes = [];
         FixTags.Clear();

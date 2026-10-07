@@ -8,15 +8,18 @@ public static class GameTitleSanitizer
     {
         if (string.IsNullOrWhiteSpace(title)) return title;
 
-        // Remove trademark/copyright symbols
         string result = title.Replace("®", "").Replace("™", "").Replace("©", "");
-
-        // Remove common editions and suffixes
         result = Regex.Replace(result, @" - Game of the Year Edition.*$", "", RegexOptions.IgnoreCase);
         result = Regex.Replace(result, @" Complete Edition.*$", "", RegexOptions.IgnoreCase);
-        
-        // Remove trailing dates like (2023)
         result = Regex.Replace(result, @"\s*\(\d{4}\)$", "");
+
+        // Aggressive GCW sanitization: GCW's search is wildcard based.
+        // If a title has a colon or a dash, taking just the first part usually yields the best search results.
+        var colonIndex = result.IndexOf(':');
+        if (colonIndex > 0) result = result.Substring(0, colonIndex);
+
+        var dashIndex = result.IndexOf('-');
+        if (dashIndex > 0) result = result.Substring(0, dashIndex);
 
         return result.Trim();
     }
