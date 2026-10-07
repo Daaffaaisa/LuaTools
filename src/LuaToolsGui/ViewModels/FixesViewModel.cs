@@ -282,7 +282,23 @@ public partial class FixesViewModel : PagedListViewModel<FixGameCardVm>
             var extractor = new LuaToolsGui.Services.ModExtractionService(library, settings);
             
             string targetDir = null;
-            if (long.TryParse(game.AppId, out long appId))
+            if (game.AppId == "UNIVERSAL")
+            {
+                var dialog = new Microsoft.Win32.OpenFolderDialog
+                {
+                    Title = "Pilih folder instalasi game tujuan untuk mengekstrak Fix"
+                };
+                if (dialog.ShowDialog() == true)
+                {
+                    targetDir = dialog.FolderName;
+                }
+                else
+                {
+                    IsSearchingGcw = false;
+                    return; // cancelled
+                }
+            }
+            else if (long.TryParse(game.AppId, out long appId))
             {
                 targetDir = library.GetInstallDir(appId);
             }
@@ -348,6 +364,15 @@ public partial class FixesViewModel : PagedListViewModel<FixGameCardVm>
             }
 
             _allGames = data.Games.Select(g => new FixGameCardVm(g)).ToList();
+            
+            var universalGame = new LuaToolsGui.Models.DenuvoGameListing
+            {
+                AppId = "UNIVERSAL",
+                Name = "Cari Game Lain (GCW Universal)",
+                FixCount = 0
+            };
+            _allGames.Insert(0, new FixGameCardVm(universalGame));
+
             Tags.Clear();
             foreach (var t in data.Tags) Tags.Add(new TagPillVm(t));
 
