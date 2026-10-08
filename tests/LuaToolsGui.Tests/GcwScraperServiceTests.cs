@@ -62,14 +62,10 @@ public class GcwScraperServiceTests
         var results = await service.SearchFixesAsync("Crimson Desert");
 
         // Assert
-        Assert.Equal(2, results.Count);
-        
-        Assert.Equal("Crimson Desert v1 0 Trainer-FLiNG", results[0].Title);
-        Assert.Equal("https://dl.gamecopyworld.com/?c=19330&d=2026&f=Crimson.Desert.v1.0.Trainer-FLiNG!rar", results[0].MirrorPageUrl);
-        Assert.Equal("Unknown", results[0].DateLabel);
+        Assert.Equal(1, results.Count);
 
-        Assert.Equal("Crimson Desert Fix", results[1].Title);
-        Assert.Equal("https://dl.gamecopyworld.com/?c=19330&d=2026&f=Crimson.Desert.Fix!rar", results[1].MirrorPageUrl);
+        Assert.Equal("Crimson Desert Fix", results[0].Title);
+        Assert.Equal("https://dl.gamecopyworld.com/?c=19330&d=2026&f=Crimson.Desert.Fix!rar", results[0].MirrorPageUrl);
         
         Assert.Equal(2, handler.Calls); // Index + Game page
     }

@@ -76,12 +76,25 @@ public class GcwScraperService
                 var titleLower = title.ToLowerInvariant();
                 
                 // Exclude trainers and cheats since we only want fixes
+                // Extensive blacklist to filter out non-fixes
                 if (titleLower.Contains("trainer") || 
                     titleLower.Contains("cheat") || 
                     titleLower.Contains("promo") || 
                     titleLower.Contains("editor") || 
                     titleLower.Contains("savegame") || 
-                    titleLower.Contains("unlocker"))
+                    titleLower.Contains("unlocker") ||
+                    titleLower.Contains("update") ||
+                    titleLower.Contains("patch") ||
+                    titleLower.Contains("mod") ||
+                    titleLower.Contains("music") ||
+                    titleLower.Contains("soundtrack") ||
+                    titleLower.Contains("movies") ||
+                    titleLower.Contains("language") ||
+                    titleLower.Contains("pack") ||
+                    titleLower.Contains("intro") ||
+                    titleLower.Contains("blood") ||
+                    titleLower.Contains("demo") ||
+                    titleLower.Contains("tool"))
                 {
                     continue;
                 }
