@@ -483,9 +483,19 @@ public partial class FixesViewModel : PagedListViewModel<FixGameCardVm>
     {
         SelectedGame = game;
         _ = game.EnsureCoverAsync(covers); // ensure the flyout header image is cached too
-        GcwSearchTitle = LuaToolsGui.Services.GameTitleSanitizer.Sanitize(game.Name);
+        
+        if (game.AppId == "UNIVERSAL")
+        {
+            GcwSearchTitle = "";
+            IsGcwManualSearchVisible = true;
+        }
+        else
+        {
+            GcwSearchTitle = LuaToolsGui.Services.GameTitleSanitizer.Sanitize(game.Name);
+            IsGcwManualSearchVisible = false;
+        }
+        
         GcwFixes.Clear();
-        IsGcwManualSearchVisible = false;
         Fixes.Clear();
         _allFixes = [];
         FixTags.Clear();
