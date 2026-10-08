@@ -628,6 +628,37 @@
                         IsChecked="{Binding DonateKeys, Mode=TwoWay}" />
                 </Grid>
             </Border>
+
+            <!-- App Updates -->
+            <TextBlock Style="{StaticResource SectionHeader}" Text="Update Aplikasi" />
+            <Border Style="{StaticResource SettingsCard}">
+                <Grid Margin="14,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock
+                            FontSize="13"
+                            FontWeight="Medium"
+                            Text="Periksa Pembaruan" />
+                        <TextBlock
+                            Margin="0,4,0,0"
+                            FontSize="12"
+                            Foreground="#6b7280"
+                            Text="Cek pembaruan aplikasi secara manual dan pasang versi terbaru."
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+                    <ui:Button
+                        Grid.Column="1"
+                        Margin="12,0,0,0"
+                        VerticalAlignment="Center"
+                        Appearance="Primary"
+                        Command="{Binding CheckForUpdatesCommand}"
+                        Icon="{ui:SymbolIcon ArrowDownload24}"
+                        Content="Cek Update" />
+                </Grid>
+            </Border>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

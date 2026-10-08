@@ -22,6 +22,8 @@ public partial class SettingsViewModel : ObservableObject
     private readonly AuthService _auth;
     private readonly SteamService _steam;
     private readonly HubcapService _hubcap;
+    private readonly Services.ToastService _toast;
+    private readonly Services.UpdateService _updates;
 
     [ObservableProperty] private string? _displayName;
     [ObservableProperty] private string? _email;
@@ -243,13 +245,39 @@ public partial class SettingsViewModel : ObservableObject
     /// App provides the toast + restart action.</summary>
     public Action? RequestRestartPrompt { get; set; }
 
+    [RelayCommand]
+    private async Task CheckForUpdatesAsync()
+    {
+        _toast.Show("Update", "Memeriksa pembaruan aplikasi...");
+        try
+        {
+            await _updates.CheckAndStageAsync();
+            if (_updates.HasStagedUpdate)
+            {
+                _toast.Show("Update", "Memasang update dan merestart...");
+                await Task.Delay(1500);
+                _updates.ApplyAndRestart();
+            }
+            else
+            {
+                _toast.Show("Update", "Aplikasi sudah dalam versi terbaru.");
+            }
+        }
+        catch (Exception ex)
+        {
+            _toast.Show("Update", "Gagal memeriksa pembaruan: " + ex.Message, error: true);
+        }
+    }
+
     public SettingsViewModel(SettingsService settings, AuthService auth, SteamService steam,
-        HubcapService hubcap)
+        HubcapService hubcap, Services.ToastService toast, Services.UpdateService updates)
     {
         _settings = settings;
         _auth = auth;
         _steam = steam;
         _hubcap = hubcap;
+        _toast = toast;
+        _updates = updates;
         _auth.AuthStateChanged += RefreshAccount;
         RefreshAccount();
         RefreshSteam();
