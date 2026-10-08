@@ -225,7 +225,11 @@
                                     CornerRadius="10">
                                     <StackPanel>
                                         <Border Height="116" Background="#11FFFFFF" ClipToBounds="True" CornerRadius="10,10,0,0">
-                                            <Image Source="{Binding Cover, Converter={StaticResource ImagePathToSource}}" Stretch="UniformToFill" />
+                                            <Grid>
+                                                <!-- Ikon placeholder bawaan kalau cover gagal di-load atau Card Universal -->
+                                                <ui:SymbolIcon Symbol="Search24" FontSize="42" Foreground="#33FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                <Image Source="{Binding Cover, Converter={StaticResource ImagePathToSource}}" Stretch="UniformToFill" />
+                                            </Grid>
                                         </Border>
                                         <StackPanel Margin="12,8,12,10">
                                             <TextBlock
