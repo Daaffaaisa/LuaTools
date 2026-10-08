@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.IO.Compression;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -182,7 +182,7 @@ public partial class FixesViewModel : PagedListViewModel<FixGameCardVm>
     /// </summary>
     /// <remarks>
     /// The count must be the INTERSECTION, not <c>_installedAppIds.Count</c>. The string reads "{0} of
-    /// your games have fixes", but the raw count is every game with a lua added — so a library with 243
+    /// your games have fixes", but the raw count is every game with a lua added � so a library with 243
     /// added games advertised 243 fixes while the filtered grid showed a dozen. This mirrors exactly what
     /// <c>ApplyFilter</c> puts on screen when My games is on.
     /// </remarks>
@@ -202,13 +202,13 @@ public partial class FixesViewModel : PagedListViewModel<FixGameCardVm>
     {
         if (value)
         {
-            SelectedTagId = null; // one filter at a time — turning "my games" on drops any tag
+            SelectedTagId = null; // one filter at a time � turning "my games" on drops any tag
             foreach (var pill in Tags) pill.IsSelected = false;
         }
         ApplyFilter();
     }
 
-    // ── Detail flyout ───────────────────────────────────────────────
+    // -- Detail flyout -----------------------------------------------
 
     // --- GCW Fix Finder ---
     [ObservableProperty] private string _gcwSearchTitle = "";
@@ -346,7 +346,7 @@ public partial class FixesViewModel : PagedListViewModel<FixGameCardVm>
     // Downloads are owned by the shared DownloadQueue; per-fix progress lives on FixItemVm. The page no
     // longer has an IsBusy gate, so several fixes can be queued without waiting for each other.
 
-    // ── Load ─────────────────────────────────────────────────────────
+    // -- Load ---------------------------------------------------------
 
     /// <param name="force">True to re-fetch even if already loaded (the Refresh button); otherwise the
     /// listing loads once per session.</param>
@@ -400,7 +400,7 @@ public partial class FixesViewModel : PagedListViewModel<FixGameCardVm>
     [RelayCommand]
     private Task Refresh() => RefreshWithCooldownAsync(async () =>
     {
-        if (SearchText.Length > 0) SearchText = ""; // reset filter → full list visible
+        if (SearchText.Length > 0) SearchText = ""; // reset filter ? full list visible
         if (SelectedTagId is not null) SelectTag(SelectedTagId); // clear active tag (toggles off)
         if (MyGamesOnly) MyGamesOnly = false; // ditto for the "my games" filter
         await LoadAsync(force: true);
@@ -412,7 +412,7 @@ public partial class FixesViewModel : PagedListViewModel<FixGameCardVm>
     private void SelectTag(string? tagId)
     {
         SelectedTagId = SelectedTagId == tagId ? null : tagId; // toggle off when re-clicked
-        if (MyGamesOnly) MyGamesOnly = false; // one filter at a time — picking a tag drops "my games"
+        if (MyGamesOnly) MyGamesOnly = false; // one filter at a time � picking a tag drops "my games"
         foreach (var pill in Tags) pill.IsSelected = pill.Id == SelectedTagId;
         ApplyFilter();
     }
@@ -430,7 +430,7 @@ public partial class FixesViewModel : PagedListViewModel<FixGameCardVm>
         SetFiltered(shown);
     }
 
-    // ── Detail flyout ───────────────────────────────────────────────
+    // -- Detail flyout -----------------------------------------------
 
     /// <summary>
     /// Open the detail flyout for a specific game by its Steam AppId. Loads the listing if needed,
@@ -460,7 +460,7 @@ public partial class FixesViewModel : PagedListViewModel<FixGameCardVm>
     }
 
     /// <summary>
-    /// Open the game's Steam install folder — where <c>ApplyDenuvoFix</c> extracts a fix to.
+    /// Open the game's Steam install folder � where <c>ApplyDenuvoFix</c> extracts a fix to.
     /// </summary>
     /// <remarks>
     /// Resolved on click, not bound to a property: <c>GetInstallDir</c> walks libraryfolders.vdf and the
@@ -499,7 +499,7 @@ public partial class FixesViewModel : PagedListViewModel<FixGameCardVm>
                 _allFixes = data.Fixes.Select(f => new FixItemVm(f)).ToList();
 
                 // Is the game on disk? GetInstallDir walks libraryfolders.vdf + appmanifest_*.acf, so
-                // it's file I/O — off the UI thread. Resolved once here rather than per fix row.
+                // it's file I/O � off the UI thread. Resolved once here rather than per fix row.
                 string? installDir = long.TryParse(game.AppId, out long gameAppId)
                     ? await Task.Run(() => library.GetInstallDir(gameAppId))
                     : null;
@@ -546,7 +546,7 @@ public partial class FixesViewModel : PagedListViewModel<FixGameCardVm>
     [RelayCommand]
     private void CloseDetail() => SelectedGame = null;
 
-    // ── Downloads ────────────────────────────────────────────────────
+    // -- Downloads ----------------------------------------------------
 
     [RelayCommand]
     private Task DownloadManifest(FixItemVm fix) => RunDownload(fix, "manifest");
@@ -647,3 +647,4 @@ public partial class FixesViewModel : PagedListViewModel<FixGameCardVm>
         return true;
     }
 }
+

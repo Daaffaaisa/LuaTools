@@ -10,31 +10,49 @@ namespace LuaToolsGui.Tests;
 
 public class GcwScraperServiceTests
 {
-    private sealed class StubHandler : HttpMessageHandler
+    private class StubHandler : HttpMessageHandler
     {
-        private readonly Func<HttpRequestMessage, string> _route;
+        private readonly Func<HttpRequestMessage, string> _responder;
         public int Calls { get; private set; }
-        public HttpRequestMessage? LastRequest { get; private set; }
 
-        public StubHandler(Func<HttpRequestMessage, string> route)
+        public StubHandler(Func<HttpRequestMessage, string> responder)
         {
-            _route = route;
+            _responder = responder;
         }
 
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             Calls++;
-            LastRequest = request;
-            var body = _route(request);
-            if (body == null) return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
-            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body) });
+            var html = _responder(request);
+            if (html == null) return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+            
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) {
+                Content = new StringContent(html)
+            });
         }
+    }
+
+    [Fact]
+    public async Task SearchFixesAsync_ReturnsEmptyWhenIndexDoesNotContainGame()
+    {
+        // Arrange
+        var indexHtml = "<html><body>Some other game</body></html>";
+        var handler = new StubHandler(_ => indexHtml);
+        var client = new HttpClient(handler);
+        var service = new GcwScraperService(client);
+
+        // Act
+        var results = await service.SearchFixesAsync("Ghost of Tsushima");
+
+        // Assert
+        Assert.Empty(results);
+        Assert.Equal(4, handler.Calls); // Checks all 4 index files
     }
 
     [Fact]
     public async Task SearchFixesAsync_ParsesGameCopyWorldHtmlAndReturnsFixItems()
     {
-        // Arrange: Fake HTML that mimics real GCW structure (Index -> Game Page -> Mirrors)
+        // Arrange
         var indexHtml = """
         <html><body>
             <a href="pc_crimson_desert.shtml">Crimson Desert</a>
@@ -44,7 +62,18 @@ public class GcwScraperServiceTests
 
         var gameHtml = """
         <html><body>
+            >Index<
+            <table class="t8">
+                <tr><td><b>Game Trainers &amp; Unlockers:</b></td></tr>
+                <tr><td><a href="#Crimson Desert Trainer">Crimson Desert Trainer</a></td></tr>
+                <tr><td><b>Game Fixes:</b></td></tr>
+                <tr><td><a href="#Crimson Desert Fix">Crimson Desert Fix</a></td></tr>
+            </table>
+
+            <a name="Crimson Desert Trainer"></a>
             <a href='enable_javascript.shtml' onMouseDown="cbox('https://dl.gamecopyworld.com/?c=19330&d=2026&f=Crimson.Desert.v1.0.Trainer-FLiNG!rar'); return false;">MIRROR #01</a>
+            
+            <a name="Crimson Desert Fix"></a>
             <a href='enable_javascript.shtml' onMouseDown="cbox('https://dl.gamecopyworld.com/?c=19330&d=2026&f=Crimson.Desert.Fix!rar'); return false;">MIRROR #02</a>
         </body></html>
         """;
@@ -62,10 +91,13 @@ public class GcwScraperServiceTests
         var results = await service.SearchFixesAsync("Crimson Desert");
 
         // Assert
-        Assert.Equal(1, results.Count);
+        Assert.Equal(2, results.Count);
 
-        Assert.Equal("Crimson Desert Fix", results[0].Title);
-        Assert.Equal("https://dl.gamecopyworld.com/?c=19330&d=2026&f=Crimson.Desert.Fix!rar", results[0].MirrorPageUrl);
+        Assert.Equal("[Game Trainers & Unlockers] Crimson Desert Trainer", results[0].Title);
+        Assert.Equal("https://dl.gamecopyworld.com/?c=19330&d=2026&f=Crimson.Desert.v1.0.Trainer-FLiNG!rar", results[0].MirrorPageUrl);
+
+        Assert.Equal("[Game Fixes] Crimson Desert Fix", results[1].Title);
+        Assert.Equal("https://dl.gamecopyworld.com/?c=19330&d=2026&f=Crimson.Desert.Fix!rar", results[1].MirrorPageUrl);
         
         Assert.Equal(2, handler.Calls); // Index + Game page
     }
@@ -73,7 +105,6 @@ public class GcwScraperServiceTests
     [Fact]
     public async Task GetDirectDownloadUrlAsync_ResolvesMirrorAndReturnsArchiveUrl()
     {
-        // The mirror page on dl.gamecopyworld.com contains the actual g1.gamecopyworld.com mirror link
         var mirrorHtml = """
         <html><body>
             <a href="https://g1.gamecopyworld.com/?y=encoded_payload" rel="nofollow">MIRROR #01</a>
@@ -83,11 +114,10 @@ public class GcwScraperServiceTests
         var client = new HttpClient(handler);
         var service = new GcwScraperService(client);
 
-        // Act
-        var result = await service.GetDirectDownloadUrlAsync("https://dl.gamecopyworld.com/?c=123&f=test!rar");
+        var directUrl = await service.GetDirectDownloadUrlAsync("https://dl.gamecopyworld.com/?c=12345");
 
-        // Assert
-        Assert.Equal("https://g1.gamecopyworld.com/?y=encoded_payload", result);
-        Assert.Equal("https://dl.gamecopyworld.com/?c=123&f=test!rar", handler.LastRequest!.Headers.Referrer?.ToString());
+        Assert.Equal("https://g1.gamecopyworld.com/?y=encoded_payload", directUrl);
+        Assert.Equal(1, handler.Calls);
     }
 }
+

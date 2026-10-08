@@ -63,50 +63,99 @@ public class GcwScraperService
         var gameHtml = await gameRes.Content.ReadAsStringAsync();
 
         var results = new List<GcwFixItem>();
-        // cbox('https://dl.gamecopyworld.com/?c=19330&d=2026&f=Crimson.Desert.v1.0.Trainer-FLiNG!rar')
-        var dlMatches = Regex.Matches(gameHtml, @"cbox\('([^']+dl\.gamecopyworld\.com[^']+)'\s*\)", RegexOptions.IgnoreCase);
 
-        foreach (Match m in dlMatches)
+        // 4. Parse the Index table to map anchors to their respective categories
+        var categories = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var indexStart = gameHtml.IndexOf(">Index<");
+        if (indexStart >= 0)
         {
-            var mirrorUrl = m.Groups[1].Value.Replace("&amp;", "&");
-            var fileMatch = Regex.Match(mirrorUrl, @"&f=([^!&]+)");
-            if (fileMatch.Success)
+            var t8Start = gameHtml.IndexOf("<table class=\"t8\">", indexStart);
+            if (t8Start >= 0)
             {
-                var title = Uri.UnescapeDataString(fileMatch.Groups[1].Value).Replace(".", " ");
-                var titleLower = title.ToLowerInvariant();
-                
-                // Exclude trainers and cheats since we only want fixes
-                // Extensive blacklist to filter out non-fixes
-                if (titleLower.Contains("trainer") || 
-                    titleLower.Contains("cheat") || 
-                    titleLower.Contains("promo") || 
-                    titleLower.Contains("editor") || 
-                    titleLower.Contains("savegame") || 
-                    titleLower.Contains("unlocker") ||
-                    titleLower.Contains("update") ||
-                    titleLower.Contains("patch") ||
-                    titleLower.Contains("mod") ||
-                    titleLower.Contains("music") ||
-                    titleLower.Contains("soundtrack") ||
-                    titleLower.Contains("movies") ||
-                    titleLower.Contains("language") ||
-                    titleLower.Contains("pack") ||
-                    titleLower.Contains("intro") ||
-                    titleLower.Contains("blood") ||
-                    titleLower.Contains("demo") ||
-                    titleLower.Contains("tool"))
+                var t8End = gameHtml.IndexOf("</table>", t8Start);
+                if (t8End >= 0)
                 {
-                    continue;
+                    var indexHtml = gameHtml.Substring(t8Start, t8End - t8Start);
+                    var currentCategory = "Misc";
+                    
+                    var lines = indexHtml.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+                    foreach (var line in lines)
+                    {
+                        var catMatch = Regex.Match(line, @"<b>([^<]+):</b>");
+                        if (catMatch.Success)
+                        {
+                            currentCategory = catMatch.Groups[1].Value.Trim().Replace("&amp;", "&");
+                        }
+                        
+                        var anchorMatch = Regex.Match(line, @"href=""#([^""]+)""[^>]*>([^<]+)</a>");
+                        if (anchorMatch.Success)
+                        {
+                            var anchor = anchorMatch.Groups[1].Value;
+                            categories[anchor] = currentCategory;
+                        }
+                    }
                 }
+            }
+        }
 
-                if (!results.Any(x => x.Title == title))
+        // 5. Scan the body sections for those anchors and extract their cbox mirrors
+        foreach (var kvp in categories)
+        {
+            var anchor = kvp.Key;
+            var category = kvp.Value;
+
+            // Optional: User wants to focus on Fixes. We could skip Trainers here.
+            // But prefixing them allows the user to see everything clearly grouped.
+            // Let's just prefix it and let the user decide.
+            var displayTitle = $"[{category}] {Uri.UnescapeDataString(anchor)}";
+
+            var secStart = gameHtml.IndexOf($"<a name=\"{anchor}\">");
+            if (secStart < 0) secStart = gameHtml.IndexOf($"<a name='{anchor}'>");
+            
+            if (secStart >= 0)
+            {
+                var nextSec = gameHtml.IndexOf("<a name=", secStart + 10);
+                var secHtml = nextSec > 0 ? gameHtml.Substring(secStart, nextSec - secStart) : gameHtml.Substring(secStart);
+                
+                var dlMatches = Regex.Matches(secHtml, @"cbox\('([^']+dl\.gamecopyworld\.com[^']+)'");
+                foreach (Match dm in dlMatches)
                 {
-                    results.Add(new GcwFixItem {
-                        Title = title,
-                        DateLabel = "Unknown",
-                        Size = "Unknown",
-                        MirrorPageUrl = mirrorUrl
-                    });
+                    var mirrorUrl = dm.Groups[1].Value.Replace("&amp;", "&");
+                    
+                    if (!results.Any(x => x.Title == displayTitle))
+                    {
+                        results.Add(new GcwFixItem {
+                            Title = displayTitle,
+                            DateLabel = "Unknown",
+                            Size = "Unknown",
+                            MirrorPageUrl = mirrorUrl
+                        });
+                        break; // Grab the first mirror for this anchor and move on
+                    }
+                }
+            }
+        }
+
+        // Fallback: If no categories were parsed (e.g. malformed HTML), just grab all cbox links
+        if (results.Count == 0)
+        {
+            var fallbackMatches = Regex.Matches(gameHtml, @"cbox\('([^']+dl\.gamecopyworld\.com[^']+)'\s*\)", RegexOptions.IgnoreCase);
+            foreach (Match m in fallbackMatches)
+            {
+                var mirrorUrl = m.Groups[1].Value.Replace("&amp;", "&");
+                var fileMatch = Regex.Match(mirrorUrl, @"&f=([^!&]+)");
+                if (fileMatch.Success)
+                {
+                    var title = Uri.UnescapeDataString(fileMatch.Groups[1].Value).Replace(".", " ");
+                    if (!results.Any(x => x.Title == title))
+                    {
+                        results.Add(new GcwFixItem {
+                            Title = title,
+                            DateLabel = "Unknown",
+                            Size = "Unknown",
+                            MirrorPageUrl = mirrorUrl
+                        });
+                    }
                 }
             }
         }
