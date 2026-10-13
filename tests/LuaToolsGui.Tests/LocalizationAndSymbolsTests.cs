@@ -45,4 +45,22 @@ public class LocalizationAndSymbolsTests
         Assert.DoesNotContain("?", row.ManifestLabel);
         Assert.Contains("·", row.ManifestLabel);
     }
+
+    [Fact]
+    public void AccountSwitcher_StatusMessage_IsInEnglishAndHasNoBrokenEmoji()
+    {
+        var vm = new AccountSwitcherViewModel();
+        Assert.DoesNotContain("Mencari", vm.StatusMessage);
+        Assert.DoesNotContain("Belum ada", vm.StatusMessage);
+        Assert.DoesNotContain("⚠️", vm.StatusMessage);
+    }
+
+    [Fact]
+    public void GameSuspender_StatusMessage_IsInEnglishAndHasNoBrokenEmoji()
+    {
+        var vm = new GameSuspenderViewModel();
+        Assert.DoesNotContain("Menemukan", vm.StatusMessage);
+        Assert.DoesNotContain("🔍", vm.StatusMessage);
+        Assert.Contains("Found", vm.StatusMessage);
+    }
 }

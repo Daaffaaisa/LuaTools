@@ -197,7 +197,7 @@
                                 VerticalAlignment="Center"
                                 FontSize="12.5"
                                 Foreground="#d1d5db"
-                                Text="🔄 Fast Account Switcher (Ganti Akun Steam)" />
+                                Text="Fast Account Switcher" />
                         </Grid>
                     </Button>
 
@@ -222,7 +222,7 @@
                                 VerticalAlignment="Center"
                                 FontSize="12.5"
                                 Foreground="#d1d5db"
-                                Text="❄️ Console-Style Game Suspender" />
+                                Text="Console-Style Game Suspender" />
                         </Grid>
                     </Button>
 

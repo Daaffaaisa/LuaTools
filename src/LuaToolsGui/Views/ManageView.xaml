@@ -762,7 +762,7 @@
                             HorizontalAlignment="Stretch"
                             Command="{Binding DataContext.ManageAchievementsCommand, ElementName=Root}"
                             CommandParameter="{Binding}"
-                            Content="🏆 Manage Achievements"
+                            Content="Manage Achievements"
                             Icon="{ui:SymbolIcon Trophy24}" />
                         <ui:Button
                             Margin="0,8,0,0"

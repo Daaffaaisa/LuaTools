@@ -21,7 +21,7 @@ public class SteamAccount
 public partial class AccountSwitcherViewModel : ObservableObject
 {
     [ObservableProperty] private ObservableCollection<SteamAccount> _accounts = new();
-    [ObservableProperty] private string _statusMessage = "Mencari akun Steam di komputer ini...";
+    [ObservableProperty] private string _statusMessage = "Scanning for Steam accounts on this PC...";
     [ObservableProperty] private bool _hasAccounts = false;
 
     public AccountSwitcherViewModel()
@@ -71,7 +71,7 @@ public partial class AccountSwitcherViewModel : ObservableObject
             else
             {
                 HasAccounts = false;
-                StatusMessage = "⚠️ Belum ada akun yang pernah login di PC ini (atau data belum tersimpan).";
+                StatusMessage = "No Steam accounts have logged in on this PC yet (or data not saved).";
             }
         }
         catch (Exception ex)

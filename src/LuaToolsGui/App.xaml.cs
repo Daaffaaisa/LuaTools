@@ -424,7 +424,7 @@ public partial class App : Application
             
             if (installDir is null || !System.IO.Directory.Exists(installDir))
             {
-                System.Windows.MessageBox.Show("Folder instalasi game tidak ditemukan. Pastikan game masih terinstal.", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                System.Windows.MessageBox.Show("Game installation folder was not found. Please verify the game is installed.", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
                 return;
             }
 
@@ -680,20 +680,20 @@ public partial class App : Application
                 var nexusService = _host.Services.GetRequiredService<Services.NexusModsService>();
                 var toastService = _host.Services.GetRequiredService<Services.ToastService>();
                 
-                toastService.Show("Nexus Mods", $"Menghubungi server Nexus untuk {nxm.Game} Mod ID {nxm.ModId}...");
+                toastService.Show("Nexus Mods", $"Connecting to Nexus server for {nxm.Game} (Mod ID: {nxm.ModId})...");
 
                 var (cdnLink, _) = await nexusService.GetDownloadLinkAsync(nxm.Game, nxm.ModId, nxm.FileId, nxm.QueryParams);
                 
                 if (cdnLink != null)
                 {
-                    toastService.Show("Mendownload Mod...", $"Mod ID {nxm.ModId}\nSilakan tunggu di latar belakang.");
+                    toastService.Show("Downloading Mod", $"Mod ID: {nxm.ModId}\nPlease wait while downloading in background.");
                     
                     // Actually download the file
                     string? savedPath = await nexusService.DownloadModFileAsync(cdnLink);
                     
                     if (savedPath != null)
                     {
-                        toastService.Show("Mengekstrak Mod...", $"Sedang memasang mod ke folder game...");
+                        toastService.Show("Extracting Mod", "Installing mod files to game directory...");
                         
                         var extractor = _host.Services.GetRequiredService<Services.ModExtractionService>();
                         var settings = _host.Services.GetRequiredService<Services.SettingsService>();
@@ -732,12 +732,12 @@ public partial class App : Application
 
                             if (userCanceled)
                             {
-                                toastService.Show("Batal", "Pemasangan mod dibatalkan oleh pengguna.");
+                                toastService.Show("Canceled", "Mod installation was canceled by user.");
                                 return;
                             }
                         }
 
-                        toastService.Show("Mengekstrak Mod...", $"Sedang memasang mod...");
+                        toastService.Show("Extracting Mod", "Extracting mod files...");
                         var (success, errorMsg, extractPath, extractedFiles) = await extractor.ExtractModAsync(savedPath, nxm.Game, targetDirOverride);
                         
                         if (success && extractedFiles != null)
@@ -758,10 +758,8 @@ public partial class App : Application
                             if (success)
                             {
                                 System.Windows.MessageBox.Show(
-                                    $"🎉 MOD BERHASIL DIPASANG! 🎉\n\n" +
-                                    $"File Mod telah sukses diekstrak.\n\n" +
-                                    $"Lokasi:\n{extractPath}\n\n" +
-                                    $"Fase 4 (Smart Extractor) Selesai!",
+                                    $"Mod installed successfully!\n\n" +
+                                    $"Files have been extracted to:\n{extractPath}",
                                     "LuaTools Mod Manager", 
                                     System.Windows.MessageBoxButton.OK, 
                                     System.Windows.MessageBoxImage.Information);
@@ -769,9 +767,9 @@ public partial class App : Application
                             else
                             {
                                 System.Windows.MessageBox.Show(
-                                    $"❌ GAGAL EKSTRAK MOD ❌\n\n" +
-                                    $"Alasan: {errorMsg}\n\n" +
-                                    $"File zip mentahnya masih aman di:\n{savedPath}",
+                                    $"Failed to extract mod:\n\n" +
+                                    $"Reason: {errorMsg}\n\n" +
+                                    $"Archive file is saved at:\n{savedPath}",
                                     "LuaTools Mod Manager", 
                                     System.Windows.MessageBoxButton.OK, 
                                     System.Windows.MessageBoxImage.Error);
@@ -780,7 +778,7 @@ public partial class App : Application
                     }
                     else
                     {
-                        toastService.Show("Download Gagal", "Gagal mengunduh file mod dari Nexus.", true);
+                        toastService.Show("Download Failed", "Failed to download mod file from Nexus Mods.", true);
                     }
                 }
                 else
@@ -788,8 +786,8 @@ public partial class App : Application
                     Dispatcher.Invoke(() =>
                     {
                         System.Windows.MessageBox.Show(
-                            $"❌ FASE 2 GAGAL! ❌\n\n" +
-                            $"Server Nexus Mods menolak koneksi.\nPastikan API Key kamu sudah tersimpan di Settings dengan benar!",
+                            $"Connection failed!\n\n" +
+                            $"Nexus Mods server rejected the request.\nPlease verify your Personal API Key is saved correctly in Settings.",
                             "LuaTools Mod Manager", 
                             System.Windows.MessageBoxButton.OK, 
                             System.Windows.MessageBoxImage.Warning);
