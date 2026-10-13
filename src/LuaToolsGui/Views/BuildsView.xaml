@@ -107,34 +107,100 @@
                                 Foreground="#e5e7eb"
                                 Text="{Binding Title}"
                                 TextTrimming="CharacterEllipsis" />
-                            <Border
+                            <StackPanel
                                 Grid.Column="1"
                                 Margin="6,0,0,0"
-                                Padding="5,1"
-                                VerticalAlignment="Center"
-                                Background="#2a2440"
-                                CornerRadius="4"
-                                Visibility="{Binding IsDlc, Converter={StaticResource BoolToVis}}">
-                                <TextBlock
-                                    FontSize="9.5"
-                                    FontWeight="SemiBold"
-                                    Foreground="#c4b5fd"
-                                    Text="DLC" />
-                            </Border>
-                            <Border
-                                Grid.Column="1"
-                                Margin="6,0,0,0"
-                                Padding="5,1"
-                                VerticalAlignment="Center"
-                                Background="#3a3320"
-                                CornerRadius="4"
-                                Visibility="{Binding IsShared, Converter={StaticResource BoolToVis}}">
-                                <TextBlock
-                                    FontSize="9.5"
-                                    FontWeight="SemiBold"
-                                    Foreground="#d6b36b"
-                                    Text="{x:Static res:Strings.Confirm_Shared}" />
-                            </Border>
+                                Orientation="Horizontal"
+                                VerticalAlignment="Center">
+                                <!-- Soundtrack Tag -->
+                                <Border
+                                    Padding="5,1"
+                                    Margin="0,0,4,0"
+                                    Background="#263b82f6"
+                                    BorderBrush="#403b82f6"
+                                    BorderThickness="1"
+                                    CornerRadius="4"
+                                    Visibility="{Binding IsSoundtrack, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock
+                                        FontSize="9.5"
+                                        FontWeight="Bold"
+                                        Foreground="#60a5fa"
+                                        Text="SOUNDTRACK" />
+                                </Border>
+
+                                <!-- Bonus / Artbook Tag -->
+                                <Border
+                                    Padding="5,1"
+                                    Margin="0,0,4,0"
+                                    Background="#26f59e0b"
+                                    BorderBrush="#40f59e0b"
+                                    BorderThickness="1"
+                                    CornerRadius="4"
+                                    Visibility="{Binding IsBonus, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock
+                                        FontSize="9.5"
+                                        FontWeight="Bold"
+                                        Foreground="#fbbf24"
+                                        Text="BONUS" />
+                                </Border>
+
+                                <!-- Standard Game DLC Tag -->
+                                <Border
+                                    Padding="5,1"
+                                    Margin="0,0,4,0"
+                                    Background="#2a2440"
+                                    CornerRadius="4">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <MultiDataTrigger>
+                                                    <MultiDataTrigger.Conditions>
+                                                        <Condition Binding="{Binding IsDlc}" Value="True" />
+                                                        <Condition Binding="{Binding IsSoundtrack}" Value="False" />
+                                                        <Condition Binding="{Binding IsBonus}" Value="False" />
+                                                    </MultiDataTrigger.Conditions>
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </MultiDataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <TextBlock
+                                        FontSize="9.5"
+                                        FontWeight="SemiBold"
+                                        Foreground="#c4b5fd"
+                                        Text="DLC" />
+                                </Border>
+
+                                <!-- License Only Pill -->
+                                <Border
+                                    Padding="5,1"
+                                    Margin="0,0,4,0"
+                                    Background="#1510b981"
+                                    BorderBrush="#3010b981"
+                                    BorderThickness="1"
+                                    CornerRadius="4"
+                                    Visibility="{Binding IsLicenseOnly, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock
+                                        FontSize="9.5"
+                                        FontWeight="SemiBold"
+                                        Foreground="#34d399"
+                                        Text="License Only" />
+                                </Border>
+
+                                <!-- Shared Depot Tag -->
+                                <Border
+                                    Padding="5,1"
+                                    Background="#3a3320"
+                                    CornerRadius="4"
+                                    Visibility="{Binding IsShared, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock
+                                        FontSize="9.5"
+                                        FontWeight="SemiBold"
+                                        Foreground="#d6b36b"
+                                        Text="{x:Static res:Strings.Confirm_Shared}" />
+                                </Border>
+                            </StackPanel>
                         </Grid>
                         <TextBlock
                             Margin="0,1,0,0"

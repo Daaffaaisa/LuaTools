@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using LuaToolsGui.Services;
 
 namespace LuaToolsGui.ViewModels;
 
@@ -13,6 +14,7 @@ public partial class DlcSelectorItemVm : ObservableObject
     public string Title { get; }
     public string Meta { get; }
     public bool IsSoundtrack { get; }
+    public bool IsBonus { get; }
     public bool HasDepot { get; }
 
     [ObservableProperty]
@@ -25,14 +27,15 @@ public partial class DlcSelectorItemVm : ObservableObject
         OnSelectionChanged?.Invoke();
     }
 
-    public DlcSelectorItemVm(long id, string title, string meta, bool isSoundtrack, bool hasDepot)
+    public DlcSelectorItemVm(long id, string title, string meta, bool isSoundtrack, bool hasDepot, bool isBonus = false)
     {
         Id = id;
         Title = title;
         Meta = meta;
-        IsSoundtrack = isSoundtrack;
+        IsSoundtrack = isSoundtrack || DlcClassifier.IsSoundtrack(title);
+        IsBonus = !IsSoundtrack && (isBonus || DlcClassifier.IsBonus(title));
         HasDepot = hasDepot;
-        _isSelected = !isSoundtrack; // Default: uncheck soundtracks, check game content
+        _isSelected = !IsSoundtrack && !IsBonus; // Default: uncheck soundtracks and artbook/bonus, check game content
     }
 
     public bool Matches(string query)
@@ -96,8 +99,25 @@ public partial class DlcSelectorViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// Selects only game DLCs (excludes Soundtrack and Artbook/Bonus).
+    /// </summary>
     [RelayCommand]
     private void SelectAll()
+    {
+        foreach (var item in FilteredItems)
+        {
+            if (!item.IsSoundtrack && !item.IsBonus)
+                item.IsSelected = true;
+        }
+        UpdateCounts();
+    }
+
+    /// <summary>
+    /// Selects everything in the current view, including Soundtracks and Bonuses.
+    /// </summary>
+    [RelayCommand]
+    private void SelectEverything()
     {
         foreach (var item in FilteredItems)
             item.IsSelected = true;

@@ -36,6 +36,15 @@ public record DepotRow(
     /// <summary>True if this entry is a DLC that is not yet declared in the lua, so it can be added.</summary>
     public bool CanAddDlc => !IsInLua && IsDlc;
 
+    /// <summary>True if this entry is a Soundtrack or Music application.</summary>
+    public bool IsSoundtrack => IsDlc && DlcClassifier.IsSoundtrack(Title);
+
+    /// <summary>True if this entry is an Artbook, Wallpaper, or Extras bonus application.</summary>
+    public bool IsBonus => IsDlc && DlcClassifier.IsBonus(Title);
+
+    /// <summary>True if this DLC does not require separate depot files (entitlement license only).</summary>
+    public bool IsLicenseOnly => IsDlc && Size == 0;
+
     /// <summary>
     /// The id whose lua lines the switches rewrite. Usually <see cref="Id"/>, but for a DLC the lua
     /// declares the DLC APP id rather than the depot id, and that's the line that has to change.
@@ -1288,10 +1297,10 @@ public partial class BuildsViewModel : PagedListViewModel<LuaTileViewModel>
         {
             string title = r.Title;
             string meta = r.Size > 0 ? $"Files: {FormatSize(r.Size)}" : "License Only";
-            bool isSoundtrack = title.Contains("soundtrack", StringComparison.OrdinalIgnoreCase) ||
-                               title.Contains("ost", StringComparison.OrdinalIgnoreCase);
+            bool isSoundtrack = r.IsSoundtrack;
+            bool isBonus = r.IsBonus;
             bool hasDepot = r.Size > 0;
-            return new DlcSelectorItemVm(r.ToggleId, title, meta, isSoundtrack, hasDepot);
+            return new DlcSelectorItemVm(r.ToggleId, title, meta, isSoundtrack, hasDepot, isBonus);
         }).ToList();
 
         var vm = new DlcSelectorViewModel(items, game.Name, game.AppId);
@@ -1612,7 +1621,14 @@ public partial class BuildsViewModel : PagedListViewModel<LuaTileViewModel>
                     : d.IsShared ? Resources.Strings.Manage_SharedDepot : Resources.Strings.Manage_Depot);
 
             var meta = new List<string> { d.Id.ToString() };
-            if (d.Size > 0) meta.Add(FormatSize(d.Size));
+            if (d.IsDlc)
+            {
+                meta.Add(d.Size > 0 ? $"Files: {FormatSize(d.Size)}" : "License Only");
+            }
+            else if (d.Size > 0)
+            {
+                meta.Add(FormatSize(d.Size));
+            }
             if (!string.IsNullOrWhiteSpace(d.Os)) meta.Add(PrettyOs(d.Os));
             if (!string.IsNullOrWhiteSpace(d.Language)) meta.Add(d.Language!);
 

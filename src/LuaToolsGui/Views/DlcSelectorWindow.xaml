@@ -7,8 +7,8 @@
     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
     xmlns:vm="clr-namespace:LuaToolsGui.ViewModels"
     Title="Select DLCs"
-    Width="720"
-    Height="580"
+    Width="760"
+    Height="600"
     d:DataContext="{d:DesignInstance Type=vm:DlcSelectorViewModel}"
     ExtendsContentIntoTitleBar="True"
     ResizeMode="CanResize"
@@ -53,6 +53,7 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
                 <ui:TextBox
@@ -66,10 +67,18 @@
                     Grid.Column="1"
                     Margin="0,0,6,0"
                     Command="{Binding SelectAllCommand}"
-                    Content="Select All" />
+                    Content="Select Game DLCs"
+                    ToolTip="Select all game DLCs (excludes Soundtracks and Bonuses)" />
 
                 <ui:Button
                     Grid.Column="2"
+                    Margin="0,0,6,0"
+                    Command="{Binding SelectEverythingCommand}"
+                    Content="Select All (Incl. Extras)"
+                    ToolTip="Select all items including Soundtracks and Artbooks" />
+
+                <ui:Button
+                    Grid.Column="3"
                     Command="{Binding DeselectAllCommand}"
                     Content="Deselect All" />
             </Grid>
@@ -105,13 +114,14 @@
                                             VerticalAlignment="Center"
                                             IsChecked="{Binding IsSelected}" />
 
-                                        <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
+                                        <StackPanel Grid.Column="1" Margin="10,0,10,0" VerticalAlignment="Center">
                                             <StackPanel Orientation="Horizontal">
                                                 <TextBlock
                                                     FontSize="13.5"
                                                     FontWeight="SemiBold"
                                                     Text="{Binding Title}"
                                                     TextTrimming="CharacterEllipsis" />
+
                                                 <!-- Soundtrack Tag -->
                                                 <Border
                                                     Margin="8,0,0,0"
@@ -128,12 +138,89 @@
                                                         Foreground="#60a5fa"
                                                         Text="SOUNDTRACK" />
                                                 </Border>
+
+                                                <!-- Bonus / Artbook Tag -->
+                                                <Border
+                                                    Margin="8,0,0,0"
+                                                    Padding="6,1"
+                                                    VerticalAlignment="Center"
+                                                    Background="#26f59e0b"
+                                                    BorderBrush="#40f59e0b"
+                                                    BorderThickness="1"
+                                                    CornerRadius="4"
+                                                    Visibility="{Binding IsBonus, Converter={StaticResource BoolToVis}}">
+                                                    <TextBlock
+                                                        FontSize="10"
+                                                        FontWeight="Bold"
+                                                        Foreground="#fbbf24"
+                                                        Text="BONUS" />
+                                                </Border>
+
+                                                <!-- Regular Game DLC Tag -->
+                                                <Border
+                                                    Margin="8,0,0,0"
+                                                    Padding="6,1"
+                                                    VerticalAlignment="Center"
+                                                    Background="#2a2440"
+                                                    CornerRadius="4">
+                                                    <Border.Style>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                            <Style.Triggers>
+                                                                <MultiDataTrigger>
+                                                                    <MultiDataTrigger.Conditions>
+                                                                        <Condition Binding="{Binding IsSoundtrack}" Value="False" />
+                                                                        <Condition Binding="{Binding IsBonus}" Value="False" />
+                                                                    </MultiDataTrigger.Conditions>
+                                                                    <Setter Property="Visibility" Value="Visible" />
+                                                                </MultiDataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Border.Style>
+                                                    <TextBlock
+                                                        FontSize="10"
+                                                        FontWeight="SemiBold"
+                                                        Foreground="#c4b5fd"
+                                                        Text="DLC" />
+                                                </Border>
                                             </StackPanel>
-                                            <TextBlock
-                                                Margin="0,2,0,0"
-                                                FontSize="11.5"
-                                                Foreground="#9ca3af"
-                                                Text="{Binding Meta}" />
+
+                                            <!-- File Status Pill & Meta -->
+                                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                                <!-- License Only Pill -->
+                                                <Border
+                                                    Padding="6,1"
+                                                    Margin="0,0,8,0"
+                                                    VerticalAlignment="Center"
+                                                    Background="#1510b981"
+                                                    BorderBrush="#3010b981"
+                                                    BorderThickness="1"
+                                                    CornerRadius="3"
+                                                    Visibility="{Binding HasDepot, Converter={StaticResource InverseBoolToVis}}">
+                                                    <TextBlock
+                                                        FontSize="10.5"
+                                                        FontWeight="SemiBold"
+                                                        Foreground="#34d399"
+                                                        Text="License Only" />
+                                                </Border>
+
+                                                <!-- Files Required Pill -->
+                                                <Border
+                                                    Padding="6,1"
+                                                    Margin="0,0,8,0"
+                                                    VerticalAlignment="Center"
+                                                    Background="#1506b6d4"
+                                                    BorderBrush="#3006b6d4"
+                                                    BorderThickness="1"
+                                                    CornerRadius="3"
+                                                    Visibility="{Binding HasDepot, Converter={StaticResource BoolToVis}}">
+                                                    <TextBlock
+                                                        FontSize="10.5"
+                                                        FontWeight="SemiBold"
+                                                        Foreground="#22d3ee"
+                                                        Text="{Binding Meta}" />
+                                                </Border>
+                                            </StackPanel>
                                         </StackPanel>
 
                                         <TextBlock

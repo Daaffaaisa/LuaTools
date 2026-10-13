@@ -13,12 +13,13 @@ public class DlcSelectorViewModelTests
         {
             new(101, "Shadow of the Erdtree", "License Only", isSoundtrack: false, hasDepot: false),
             new(102, "Digital Artbook & Original Soundtrack", "Files: 1.2 GB", isSoundtrack: true, hasDepot: true),
-            new(103, "Colosseum Pack", "Files: 500 MB", isSoundtrack: false, hasDepot: true)
+            new(103, "Colosseum Pack", "Files: 500 MB", isSoundtrack: false, hasDepot: true),
+            new(104, "Adventure Guide Artbook", "License Only", isSoundtrack: false, hasDepot: false, isBonus: true)
         };
     }
 
     [Fact]
-    public void InitialSelection_SelectsGameDlc_ExcludesSoundtrack()
+    public void InitialSelection_SelectsGameDlc_ExcludesSoundtrackAndBonus()
     {
         var items = CreateSampleItems();
         var vm = new DlcSelectorViewModel(items, "Elden Ring", 1245620);
@@ -26,19 +27,37 @@ public class DlcSelectorViewModelTests
         Assert.True(items[0].IsSelected);  // Game DLC
         Assert.False(items[1].IsSelected); // Soundtrack
         Assert.True(items[2].IsSelected);  // Game DLC
+        Assert.False(items[3].IsSelected); // Bonus
         Assert.Equal(2, vm.SelectedCount);
     }
 
     [Fact]
-    public void SelectAll_SelectsAllItems()
+    public void SelectAll_SelectsGameDlcsOnly()
     {
         var items = CreateSampleItems();
         var vm = new DlcSelectorViewModel(items, "Elden Ring", 1245620);
 
+        // Deselect first to start clean
+        vm.DeselectAllCommand.Execute(null);
         vm.SelectAllCommand.Execute(null);
 
+        Assert.True(items[0].IsSelected);  // Game DLC
+        Assert.False(items[1].IsSelected); // Soundtrack excluded
+        Assert.True(items[2].IsSelected);  // Game DLC
+        Assert.False(items[3].IsSelected); // Bonus excluded
+        Assert.Equal(2, vm.SelectedCount);
+    }
+
+    [Fact]
+    public void SelectEverything_SelectsAllItemsIncludingSoundtracks()
+    {
+        var items = CreateSampleItems();
+        var vm = new DlcSelectorViewModel(items, "Elden Ring", 1245620);
+
+        vm.SelectEverythingCommand.Execute(null);
+
         Assert.All(items, i => Assert.True(i.IsSelected));
-        Assert.Equal(3, vm.SelectedCount);
+        Assert.Equal(4, vm.SelectedCount);
     }
 
     [Fact]
@@ -68,7 +87,7 @@ public class DlcSelectorViewModelTests
         Assert.Equal(102, vm.FilteredItems[0].Id);
 
         vm.SearchQuery = "";
-        Assert.Equal(3, vm.FilteredItems.Count);
+        Assert.Equal(4, vm.FilteredItems.Count);
     }
 
     [Fact]
@@ -80,6 +99,7 @@ public class DlcSelectorViewModelTests
         items[0].IsSelected = true;
         items[1].IsSelected = false;
         items[2].IsSelected = false;
+        items[3].IsSelected = false;
 
         var selected = vm.GetSelectedDlcs().ToList();
 
