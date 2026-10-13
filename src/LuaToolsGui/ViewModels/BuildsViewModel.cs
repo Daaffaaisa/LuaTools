@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Windows;
@@ -32,6 +32,9 @@ public record DepotRow(
     /// <summary>The enable switch is offered for anything the lua declares, except the base app. Turning
     /// THAT off doesn't disable a depot, it breaks the whole file.</summary>
     public bool CanEnable => CanToggle && !IsBaseApp;
+
+    /// <summary>True if this entry is a DLC that is not yet declared in the lua, so it can be added.</summary>
+    public bool CanAddDlc => !IsInLua && IsDlc;
 
     /// <summary>
     /// The id whose lua lines the switches rewrite. Usually <see cref="Id"/>, but for a DLC the lua
@@ -1191,6 +1194,8 @@ public partial class BuildsViewModel : PagedListViewModel<LuaTileViewModel>
     public bool HasInLua => InLua.Count > 0;
     public bool HasMissing => Missing.Count > 0;
     public bool HasUnknown => Unknown.Count > 0;
+    public int MissingDlcCount => Missing.Count(r => r.IsDlc);
+    public bool HasMissingDlcs => MissingDlcCount > 0;
     public string InLuaToggleLabel => $"{(IsInLuaExpanded ? "▾" : "▸")} {Resources.Strings.Manage_Toggle_InLua}";
     public string MissingToggleLabel => $"{(IsMissingExpanded ? "▾" : "▸")} {Resources.Strings.Manage_Toggle_Missing}";
     public string UnknownToggleLabel => $"{(IsUnknownExpanded ? "▾" : "▸")} {Resources.Strings.Manage_Toggle_Unknown}";
@@ -1198,9 +1203,15 @@ public partial class BuildsViewModel : PagedListViewModel<LuaTileViewModel>
     partial void OnInLuaChanged(IReadOnlyList<DepotRow> value)
     { OnPropertyChanged(nameof(InLuaCount)); OnPropertyChanged(nameof(HasInLua)); }
     partial void OnMissingChanged(IReadOnlyList<DepotRow> value)
-    { OnPropertyChanged(nameof(MissingCount)); OnPropertyChanged(nameof(HasMissing)); }
+    {
+        OnPropertyChanged(nameof(MissingCount));
+        OnPropertyChanged(nameof(HasMissing));
+        OnPropertyChanged(nameof(MissingDlcCount));
+        OnPropertyChanged(nameof(HasMissingDlcs));
+    }
     partial void OnUnknownChanged(IReadOnlyList<DepotRow> value)
     { OnPropertyChanged(nameof(UnknownCount)); OnPropertyChanged(nameof(HasUnknown)); }
+
 
     [RelayCommand] private void ToggleInLua() => IsInLuaExpanded = !IsInLuaExpanded;
     [RelayCommand] private void ToggleMissing() => IsMissingExpanded = !IsMissingExpanded;
@@ -1233,50 +1244,80 @@ public partial class BuildsViewModel : PagedListViewModel<LuaTileViewModel>
     [RelayCommand]
     private void ToggleEnabled(DepotRow row)
     {
-        if (row.CanEnable) EditLive(row, text => LuaEditor.SetDepotEnabled(text, row.ToggleId, !row.IsEnabled));
+        if (row.CanEnable) EditLive(text => LuaEditor.SetDepotEnabled(text, row.ToggleId, !row.IsEnabled));
     }
+
+    /// <summary>Add a single missing DLC to the active lua variant.</summary>
+    [RelayCommand]
+    private void AddDlc(DepotRow row)
+    {
+        if (ActiveGame is not { } game) return;
+        EditLive(text => LuaEditor.AppendDlcEntries(text, [(row.ToggleId, row.Title)]));
+        _toast.Show(game.Name, $"DLC '{row.Title}' added to Lua!");
+    }
+
+    /// <summary>Bulk add all missing DLCs to the active lua variant.</summary>
+    [RelayCommand]
+    private void AddAllDlcs()
+    {
+        if (ActiveGame is not { } game) return;
+        var missingDlcs = _allMissing.Where(r => r.IsDlc).Select(r => (r.ToggleId, (string?)r.Title)).ToList();
+        if (missingDlcs.Count == 0)
+        {
+            _toast.Show(game.Name, "No missing DLCs found.");
+            return;
+        }
+
+        EditLive(text => LuaEditor.AppendDlcEntries(text, missingDlcs));
+        _toast.Show(game.Name, $"{missingDlcs.Count} DLC(s) added to Lua!");
+    }
+
+    /// <summary>Open the DLC selector modal to selectively choose DLCs to add.</summary>
+    [RelayCommand]
+    private void OpenDlcSelector()
+    {
+        if (ActiveGame is not { } game) return;
+        var missingDlcRows = _allMissing.Where(r => r.IsDlc).ToList();
+        if (missingDlcRows.Count == 0)
+        {
+            _toast.Show(game.Name, "No missing DLCs found.");
+            return;
+        }
+
+        var items = missingDlcRows.Select(r =>
+        {
+            string title = r.Title;
+            string meta = r.Size > 0 ? $"Files: {FormatSize(r.Size)}" : "License Only";
+            bool isSoundtrack = title.Contains("soundtrack", StringComparison.OrdinalIgnoreCase) ||
+                               title.Contains("ost", StringComparison.OrdinalIgnoreCase);
+            bool hasDepot = r.Size > 0;
+            return new DlcSelectorItemVm(r.ToggleId, title, meta, isSoundtrack, hasDepot);
+        }).ToList();
+
+        var vm = new DlcSelectorViewModel(items, game.Name, game.AppId);
+        var win = new Views.DlcSelectorWindow(vm);
+        if (win.ShowDialog() == true)
+        {
+            var selected = vm.GetSelectedDlcs().Select(x => (x.DlcId, (string?)x.Name)).ToList();
+            if (selected.Count > 0)
+            {
+                EditLive(text => LuaEditor.AppendDlcEntries(text, selected));
+                _toast.Show(game.Name, $"{selected.Count} DLC(s) added to Lua!");
+            }
+        }
+    }
+
+    private void EditLive(DepotRow _, Func<string, string> edit) => EditLive(edit);
 
     /// <summary>
     /// Apply a text edit to whichever lua the depot table is currently showing.
-    ///
-    /// <para>
-    /// Two routes, because there are two different things on screen:
-    /// </para>
-    /// <list type="bullet">
-    /// <item><b>The live lua</b> (the row Steam is running). Write the file Steam reads. If that row is
-    /// the Default, the edit lands in the Default slot immediately: <see cref="RememberEditBase"/> skips
-    /// the Default, so no edit base is parked, and the <see cref="LuaVault.SyncDefaultFromLive"/> inside
-    /// the refresh below adopts the new bytes. If it's a BUILD or preset, an edit base IS parked, the
-    /// header's "Save to &lt;name&gt;" appears, and that row stays selected and badged ACTIVE with an
-    /// "unsaved" marker: see <see cref="ResolveActiveHash"/>, which exists because the row silently
-    /// losing its ACTIVE state here is what used to dump the user back on the Default mid-edit.</item>
-    /// <item><b>A build that isn't applied</b>. Write straight into that stored variant, keeping its
-    /// name and build id. There's no live file to park a pending edit in (the live lua is a *different*
-    /// variant), so this saves immediately; Steam is untouched until the user hits Apply.</item>
-    /// </list>
-    ///
-    /// <para>
-    /// Editing must never be routed to the live file while a non-live variant is displayed. The table
-    /// on screen and the file being changed would be two different luas.
-    /// </para>
-    ///
-    /// <para>
-    /// <b>Two deliberate omissions, both reviewed. They look like oversights and aren't:</b>
-    /// </para>
-    /// <list type="bullet">
-    /// <item><b>No Save step, and no undo, for a toggle on the Default.</b> The Default is the working
-    /// copy, so flipping a switch rewrites the live lua and replaces the stored Default, discarding what
-    /// was there. Keeping a state before experimenting is what "Save as preset" is for.</item>
-    /// <item><b>No restart prompt anywhere on this page.</b> OST/BST watch <c>config/stplug-in</c>, so
-    /// rewriting the live lua applies it immediately. <see cref="Apply"/> and <see cref="SaveEdit"/> used
-    /// to prompt; none of them do now, and a modal on every switch flip would have been unusable anyway.</item>
-    /// </list>
     /// </summary>
-    private void EditLive(DepotRow row, Func<string, string> edit)
+    private void EditLive(Func<string, string> edit)
     {
         if (ActiveGame is not { } game) return;
 
         bool editingLive = SelectionDescribesLive;
+
         var target = SelectedVariant?.Variant;
 
         string before = editingLive || target is null

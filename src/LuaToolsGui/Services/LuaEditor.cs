@@ -73,4 +73,58 @@ public static class LuaEditor
 
         return string.Join('\n', lines);
     }
+
+    /// <summary>
+    /// Appends new DLC entries to the lua text under the section '-- [Custom Added DLCs]'.
+    /// Skips any DLC IDs already declared via addappid to ensure idempotency.
+    /// Uses '-- DLC <id>' fallback if the name is null or whitespace.
+    /// </summary>
+    public static string AppendDlcEntries(string lua, IEnumerable<(long DlcId, string? Name)> dlcs)
+    {
+        var existingMatches = Regex.Matches(lua, @"addappid\s*\(\s*(\d+)", RegexOptions.IgnoreCase);
+        var declaredIds = new HashSet<long>();
+        foreach (Match m in existingMatches)
+        {
+            if (long.TryParse(m.Groups[1].Value, out long id))
+                declaredIds.Add(id);
+        }
+
+        var toAdd = new List<(long DlcId, string Name)>();
+        foreach (var (dlcId, rawName) in dlcs)
+        {
+            if (declaredIds.Add(dlcId)) // returns true if not already present
+            {
+                string name = string.IsNullOrWhiteSpace(rawName) ? $"DLC {dlcId}" : rawName.Trim();
+                toAdd.Add((dlcId, name));
+            }
+        }
+
+        if (toAdd.Count == 0) return lua;
+
+        string newline = lua.Contains("\r\n") ? "\r\n" : "\n";
+        var sb = new System.Text.StringBuilder(lua);
+
+        const string header = "-- [Custom Added DLCs]";
+        if (!lua.Contains(header, StringComparison.OrdinalIgnoreCase))
+        {
+            if (sb.Length > 0 && !sb.ToString().EndsWith(newline))
+                sb.Append(newline);
+            sb.Append(newline);
+            sb.Append(header);
+            sb.Append(newline);
+        }
+        else if (sb.Length > 0 && !sb.ToString().EndsWith(newline))
+        {
+            sb.Append(newline);
+        }
+
+        foreach (var (dlcId, name) in toAdd)
+        {
+            sb.Append($"addappid({dlcId}) -- {name}");
+            sb.Append(newline);
+        }
+
+        return sb.ToString();
+    }
 }
+

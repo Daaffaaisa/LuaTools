@@ -203,4 +203,76 @@ public class LuaEditorTests
         }
         finally { try { File.Delete(path); } catch { /* best effort */ } }
     }
+
+    // ── Append DLCs ─────────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void AppendDlcEntries_AddsSectionAndEntries()
+    {
+        string original = "addappid(100, 1, \"basekey\")\n";
+        var dlcs = new (long, string?)[]
+        {
+            (101, "DLC Story"),
+            (102, "DLC Skin")
+        };
+
+        string result = LuaEditor.AppendDlcEntries(original, dlcs);
+
+        Assert.Contains("-- [Custom Added DLCs]", result);
+        Assert.Contains("addappid(101) -- DLC Story", result);
+        Assert.Contains("addappid(102) -- DLC Skin", result);
+    }
+
+    [Fact]
+    public void AppendDlcEntries_SkipsAlreadyDeclaredEntries()
+    {
+        string original = "addappid(100, 1, \"basekey\")\naddappid(101) -- Existing DLC\n";
+        var dlcs = new (long, string?)[]
+        {
+            (101, "DLC Story (Duplicate)"),
+            (102, "New DLC")
+        };
+
+        string result = LuaEditor.AppendDlcEntries(original, dlcs);
+
+        Assert.DoesNotContain("DLC Story (Duplicate)", result);
+        Assert.Contains("addappid(101) -- Existing DLC", result);
+        Assert.Contains("addappid(102) -- New DLC", result);
+    }
+
+    [Fact]
+    public void AppendDlcEntries_UsesFallbackNameWhenNullOrWhitespace()
+    {
+        string original = "addappid(100)\n";
+        var dlcs = new (long, string?)[]
+        {
+            (105, null),
+            (106, "   ")
+        };
+
+        string result = LuaEditor.AppendDlcEntries(original, dlcs);
+
+        Assert.Contains("addappid(105) -- DLC 105", result);
+        Assert.Contains("addappid(106) -- DLC 106", result);
+    }
+
+    [Fact]
+    public void AppendDlcEntries_AppendsToExistingSectionIfAlreadyPresent()
+    {
+        string original = "addappid(100)\n\n-- [Custom Added DLCs]\naddappid(101) -- DLC 101\n";
+        var dlcs = new (long, string?)[]
+        {
+            (102, "DLC 102")
+        };
+
+        string result = LuaEditor.AppendDlcEntries(original, dlcs);
+
+        // Section header should only appear once
+        int firstIndex = result.IndexOf("-- [Custom Added DLCs]");
+        int lastIndex = result.LastIndexOf("-- [Custom Added DLCs]");
+        Assert.Equal(firstIndex, lastIndex);
+        Assert.Contains("addappid(101) -- DLC 101", result);
+        Assert.Contains("addappid(102) -- DLC 102", result);
+    }
 }
+
