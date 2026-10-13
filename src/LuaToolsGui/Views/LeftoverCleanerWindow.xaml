@@ -22,9 +22,9 @@
             </Grid.ColumnDefinitions>
             
             <StackPanel>
-                <TextBlock Text="🧹 Leftover Cleaner" FontSize="18" FontWeight="Bold" Margin="0,0,0,5"/>
+                <TextBlock Text="Leftover Cleaner" FontSize="18" FontWeight="Bold" Margin="0,0,0,5"/>
                 <TextBlock Foreground="#9ca3af" FontSize="13">
-                    <Run Text="Mencari sisa Mod, Config, dan Save untuk "/>
+                    <Run Text="Scanning leftover Mods, Config, and Saves for "/>
                     <Run Text="{Binding GameName}" FontWeight="Bold" Foreground="#8b5cf6"/>
                 </TextBlock>
             </StackPanel>
@@ -76,7 +76,7 @@
         <!-- Delete Button -->
         <Button Grid.Row="3" 
                 Command="{Binding DeleteSelectedCommand}"
-                Content="🗑️ HAPUS YANG DICENTANG"
+                Content="Delete Selected"
                 Background="#ef4444" Foreground="White" FontSize="14" FontWeight="Bold" BorderThickness="0" Cursor="Hand" Padding="15,10" HorizontalAlignment="Right" />
     </Grid>
 </Window>

@@ -37,14 +37,14 @@ public partial class AccountSwitcherViewModel : ObservableObject
             string steamPath = Registry.GetValue(@"HKEY_CURRENT_USER\Software\Valve\Steam", "SteamPath", "")?.ToString() ?? "";
             if (string.IsNullOrEmpty(steamPath))
             {
-                StatusMessage = "⚠️ Steam tidak ditemukan di Registry!";
+                StatusMessage = "Steam was not found in the Registry.";
                 return;
             }
 
             string vdfPath = Path.Combine(steamPath, "config", "loginusers.vdf");
             if (!File.Exists(vdfPath))
             {
-                StatusMessage = "⚠️ File loginusers.vdf tidak ditemukan! Coba login ke Steam secara manual sekali.";
+                StatusMessage = "loginusers.vdf was not found! Please log in to Steam manually once.";
                 return;
             }
 
@@ -66,7 +66,7 @@ public partial class AccountSwitcherViewModel : ObservableObject
             if (Accounts.Count > 0)
             {
                 HasAccounts = true;
-                StatusMessage = $"✅ Menemukan {Accounts.Count} akun Steam siap dipakai.";
+                StatusMessage = $"Found {Accounts.Count} Steam account(s) ready to use.";
             }
             else
             {
@@ -76,7 +76,7 @@ public partial class AccountSwitcherViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Error membaca akun: {ex.Message}";
+            StatusMessage = $"Error reading accounts: {ex.Message}";
         }
     }
 
@@ -87,7 +87,7 @@ public partial class AccountSwitcherViewModel : ObservableObject
 
         try
         {
-            StatusMessage = $"Mengganti ke akun {account.PersonaName}...";
+            StatusMessage = $"Switching to account {account.PersonaName}...";
 
             // 1. Ganti Registry Steam
             Registry.SetValue(@"HKEY_CURRENT_USER\Software\Valve\Steam", "AutoLoginUser", account.AccountName);
@@ -100,23 +100,23 @@ public partial class AccountSwitcherViewModel : ObservableObject
                 p.Kill();
             }
 
-            StatusMessage = "Menunggu Steam mati sepenuhnya...";
+            StatusMessage = "Waiting for Steam to close completely...";
             await Task.Delay(2000); 
 
             // 3. Bangunkan Steam lagi
             string steamExe = Registry.GetValue(@"HKEY_CURRENT_USER\Software\Valve\Steam", "SteamExe", "")?.ToString() ?? "";
             if (string.IsNullOrEmpty(steamExe) || !File.Exists(steamExe))
             {
-                StatusMessage = "Gagal menemukan Steam.exe. Silakan buka Steam manual.";
+                StatusMessage = "Failed to locate Steam.exe. Please open Steam manually.";
                 return;
             }
 
             Process.Start(steamExe);
-            StatusMessage = $"🚀 Berhasil! Steam dinyalakan kembali sebagai: {account.PersonaName}";
+            StatusMessage = $"Success! Steam restarted as: {account.PersonaName}";
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Gagal mengganti akun: {ex.Message}";
+            StatusMessage = $"Failed to switch account: {ex.Message}";
         }
     }
 }

@@ -22,9 +22,9 @@ public partial class ModFolderSelectorWindow : FluentWindow
         
         if (isSetupMode)
         {
-            Title = "Pengaturan Mod Folder";
+            Title = "Mod Folder Settings";
             SubtitleText.Text = $"Game: {gameDomain} (Manual Setup)";
-            ExtractButton.Content = "Simpan Pengaturan";
+            ExtractButton.Content = "Save Settings";
             ExtractButton.Icon = new Wpf.Ui.Controls.SymbolIcon(Wpf.Ui.Controls.SymbolRegular.Save24);
         }
         else
@@ -64,7 +64,7 @@ public partial class ModFolderSelectorWindow : FluentWindow
     {
         var dialog = new OpenFolderDialog
         {
-            Title = "Pilih folder instalasi mod (misal: Mods atau Data)"
+            Title = "Select mod installation folder (e.g. Mods or Data)"
         };
 
         if (dialog.ShowDialog() == true)

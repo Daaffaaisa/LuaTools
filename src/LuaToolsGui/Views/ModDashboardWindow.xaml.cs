@@ -221,7 +221,7 @@ public partial class ModDashboardWindow : FluentWindow
         if (foundNew)
         {
             LoadMods();
-            _toast.Show("Mod Lama Terdeteksi", "Beberapa mod lama berhasil di-import otomatis.");
+            _toast.Show("Existing Mods Detected", "Some existing mods were imported automatically.");
         }
     }
 
@@ -249,7 +249,7 @@ public partial class ModDashboardWindow : FluentWindow
 
     private void AddFolder_Click(object sender, RoutedEventArgs e)
     {
-        using var fbd = new FolderBrowserDialog { Description = "Pilih folder target instalasi mod" };
+        using var fbd = new FolderBrowserDialog { Description = "Select mod installation target folder" };
         if (fbd.ShowDialog() == System.Windows.Forms.DialogResult.OK)
         {
             string newPath = fbd.SelectedPath;
@@ -278,7 +278,7 @@ public partial class ModDashboardWindow : FluentWindow
             
             if (!success)
             {
-                _toast.Show("Gagal Toggle Mod", "Sebagian file gagal diganti namanya. Pastikan game ditutup.", true);
+                _toast.Show("Failed to Toggle Mod", "Some files could not be renamed. Make sure the game is closed.", true);
                 // Revert toggle visually without triggering event
                 _isInitializing = true;
                 toggle.IsChecked = !enable;
@@ -292,8 +292,8 @@ public partial class ModDashboardWindow : FluentWindow
         if (sender is Wpf.Ui.Controls.Button btn && btn.Tag is string modId)
         {
             var result = System.Windows.MessageBox.Show(
-                "Yakin ingin menghapus mod ini beserta semua file-nya?", 
-                "Hapus Mod", 
+                "Are you sure you want to delete this mod and all its files?", 
+                "Delete Mod", 
                 System.Windows.MessageBoxButton.YesNo, 
                 MessageBoxImage.Warning);
                 
@@ -301,7 +301,7 @@ public partial class ModDashboardWindow : FluentWindow
             {
                 _registry.RemoveMod(_gameDomain, modId);
                 LoadMods();
-                _toast.Show("Mod Dihapus", "File mod berhasil dihapus secara permanen.");
+                _toast.Show("Mod Deleted", "Mod files permanently removed.");
             }
         }
     }
@@ -323,7 +323,7 @@ public partial class ModDashboardWindow : FluentWindow
         
         if (FoldersCombo.SelectedItem is not DirectoryColorInfo selectedDirInfo)
         {
-            _toast.Show("Error", "Silakan pilih atau tambah direktori target terlebih dahulu.", true);
+            _toast.Show("Error", "Please select or add a target directory first.", true);
             return;
         }
         string targetDir = selectedDirInfo.Path;
@@ -335,11 +335,11 @@ public partial class ModDashboardWindow : FluentWindow
             
             if (string.IsNullOrEmpty(zipFile))
             {
-                _toast.Show("Error", "Hanya file .zip atau .rar yang didukung saat ini.", true);
+                _toast.Show("Error", "Only .zip or .rar files are supported currently.", true);
                 return;
             }
 
-            LoadingText.Text = "Mengekstrak Mod Manual...";
+            LoadingText.Text = "Extracting Manual Mod...";
             LoadingOverlay.Visibility = Visibility.Visible;
 
             var (success, errorMsg, extractPath, extractedFiles) = await _extractor.ExtractModAsync(zipFile, _gameDomain, targetDir);
@@ -355,13 +355,13 @@ public partial class ModDashboardWindow : FluentWindow
                 });
                 
                 LoadMods();
-                _toast.Show("Mod Dipasang!", $"Mod manual berhasil diekstrak.");
+                _toast.Show("Mod Installed!", "Manual mod extracted successfully.");
             }
             else
             {
                 System.Windows.MessageBox.Show(
-                    $"? GAGAL EKSTRAK MOD ?\n\nAlasan: {errorMsg}", 
-                    "Error Instalasi", 
+                    $"Failed to extract mod:\n\nReason: {errorMsg}", 
+                    "Installation Error", 
                     System.Windows.MessageBoxButton.OK, 
                     MessageBoxImage.Error);
             }

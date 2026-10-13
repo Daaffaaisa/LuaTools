@@ -134,24 +134,23 @@
             
             <Button Grid.Column="0" Padding="12"
                     Command="{Binding UnlockAllCommand}" 
-                    Content="🔓 Unlock All Achievements"
+                    Content="Unlock All Achievements"
                     Background="#8b5cf6" Foreground="White" FontSize="14" FontWeight="Bold" BorderThickness="0" Cursor="Hand"/>
 
             <Button Grid.Column="2" Padding="12"
                     Command="{Binding LockAllCommand}" 
-                    Content="🔒 Lock All Achievements"
+                    Content="Lock All Achievements"
                     Background="#6b7280" Foreground="White" FontSize="14" FontWeight="Bold" BorderThickness="0" Cursor="Hand"/>
-            <!-- 5. Tombol Toggle Idle -->
 
             <!-- 4. Tombol Save -->
             <Button Grid.Column="4" Padding="12"
                     Command="{Binding SaveChangesCommand}"
-                    Content="💾 Save Changes to Steam"
+                    Content="Save Changes to Steam"
                     Background="#16a34a" Foreground="White" FontSize="14" FontWeight="Bold" BorderThickness="0" Cursor="Hand"/>
             <!-- 5. Tombol Toggle Idle -->
             <Button Grid.Column="6" Padding="12,12,12,12"
                     Command="{Binding ToggleIdleCommand}"
-                    Content="💤 Idle Mode"
+                    Content="Idle Mode"
                     Background="#3b82f6" Foreground="White" FontSize="14" FontWeight="Bold" BorderThickness="0" Cursor="Hand"/>
             </Grid>
         <!-- PENUTUP MAIN GRID STYLE (Tadi ketinggalan di sini) -->
@@ -159,12 +158,11 @@
 
         <Grid Style="{StaticResource IdleGridStyle}">
             <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
-                <TextBlock Text="😴" FontSize="80" HorizontalAlignment="Center" Margin="0,0,0,10"/>
                 <TextBlock Text="Farming Playtime..." FontSize="24" FontWeight="Bold" Foreground="#3b82f6" HorizontalAlignment="Center"/>
                 <TextBlock Text="{Binding GameTitle}" FontSize="14" Foreground="#d1d5db" HorizontalAlignment="Center" Margin="0,10,0,30" TextAlignment="Center"/>
                 <TextBlock Text = "{Binding IdleTimeText}" FontSize="36" FontWeight="Heavy" Foreground="#10b981" HorizontalAlignment="Center" Margin="0,10,0,30"/>
-                <!-- Tombol kembali yang akan merubak IsIdling menjadi false lagi-->
-                <Button Padding="20,12" Command="{Binding ToggleIdleCommand}" Content="⏹️ Stop Idling &amp; Kembali" Background="#ef4444" Foreground="White" FontSize="14" FontWeight="Bold" BorderThickness="0" Cursor="Hand" HorizontalAlignment="Center"/>
+                <!-- Return button -->
+                <Button Padding="20,12" Command="{Binding ToggleIdleCommand}" Content="Stop Idling &amp; Return" Background="#ef4444" Foreground="White" FontSize="14" FontWeight="Bold" BorderThickness="0" Cursor="Hand" HorizontalAlignment="Center"/>
             </StackPanel>
         </Grid>
 

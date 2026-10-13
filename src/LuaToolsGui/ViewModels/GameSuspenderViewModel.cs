@@ -102,7 +102,7 @@ public partial class GameSuspenderViewModel : ObservableObject
                 });
             }
         }
-        StatusMessage = $"🔍 Menemukan {Processes.Count} game yang sedang aktif.";
+        StatusMessage = $"Found {Processes.Count} active game process(es).";
     }
 
     [RelayCommand]
@@ -118,18 +118,18 @@ public partial class GameSuspenderViewModel : ObservableObject
             {
                 NtResumeProcess(p.Handle);
                 item.IsSuspended = false;
-                StatusMessage = $"▶️ [{item.Name}] berhasil dibangunkan! Game berjalan normal.";
+                StatusMessage = $"[{item.Name}] resumed! Game is running normally.";
             }
             else
             {
                 NtSuspendProcess(p.Handle);
                 item.IsSuspended = true;
-                StatusMessage = $"⏸️ [{item.Name}] DIBEKUKAN! Pemakaian CPU langsung drop ke 0%.";
+                StatusMessage = $"[{item.Name}] suspended! CPU usage dropped to 0%.";
             }
         }
         catch (Exception ex)
         {
-            StatusMessage = $"⚠️ Gagal memanipulasi {item.Name}. Pastikan run as Admin jika game diproteksi. Error: {ex.Message}";
+            StatusMessage = $"Failed to manipulate {item.Name}. Make sure to run as Administrator if game is protected. Error: {ex.Message}";
         }
     }
 }

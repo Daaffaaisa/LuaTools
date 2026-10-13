@@ -30,7 +30,7 @@
 
         <StackPanel Grid.Row="1" Margin="24,12,24,24">
             
-            <TextBlock Text="Pindahkan game ke drive lain tanpa merusak deteksi Steam/Epic Games menggunakan NTFS Junction (Symlink)." 
+            <TextBlock Text="Move game to another drive without breaking Steam/Epic Games detection using NTFS Junction (Symlink)." 
                        TextWrapping="Wrap" 
                        Foreground="#a1a1aa" 
                        Margin="0,0,0,16"/>
@@ -45,18 +45,18 @@
                 <StackPanel>
                     <TextBlock Text="{Binding GameName}" FontWeight="Bold" FontSize="16" Margin="0,0,0,4"/>
                     <TextBlock Text="{Binding CurrentPath}" Foreground="#a1a1aa" FontSize="12" Margin="0,0,0,8" TextWrapping="Wrap"/>
-                    <TextBlock Text="{Binding TotalSizeString, StringFormat='Ukuran Total: {0}'}" FontSize="13" Foreground="#81818a"/>
+                    <TextBlock Text="{Binding TotalSizeString, StringFormat='Total Size: {0}'}" FontSize="13" Foreground="#81818a"/>
                 </StackPanel>
             </Border>
 
             <!-- Destination Selection -->
-            <TextBlock Text="Lokasi Baru (Tujuan):" FontWeight="SemiBold" Margin="0,0,0,8"/>
+            <TextBlock Text="New Location (Destination):" FontWeight="SemiBold" Margin="0,0,0,8"/>
             <Grid Margin="0,0,0,16">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <ui:TextBox Grid.Column="0" Text="{Binding DestinationPath}" IsReadOnly="True" PlaceholderText="C:\Games Baru..." Margin="0,0,8,0" Background="#2a2a35" Foreground="White" BorderThickness="0"/>
+                <ui:TextBox Grid.Column="0" Text="{Binding DestinationPath}" IsReadOnly="True" PlaceholderText="Select destination folder..." Margin="0,0,8,0" Background="#2a2a35" Foreground="White" BorderThickness="0"/>
                 <ui:Button Grid.Column="1" Content="Browse..." Command="{Binding BrowseDestinationCommand}" IsEnabled="{Binding IsNotMoving}" Background="#3b82f6" Foreground="White" BorderThickness="0" Cursor="Hand"/>
             </Grid>
 
@@ -68,12 +68,12 @@
 
             <!-- Actions -->
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <ui:Button Content="Batal" 
+                <ui:Button Content="Cancel" 
                            Margin="0,0,8,0" 
                            Click="Cancel_Click"
                            Background="#3f3f46" Foreground="White" BorderThickness="0" Cursor="Hand"
                            IsEnabled="{Binding IsNotMoving}"/>
-                <ui:Button Content="Pindahkan &amp; Symlink" 
+                <ui:Button Content="Move &amp; Symlink" 
                            Command="{Binding StartMoveCommand}"
                            IsEnabled="{Binding CanMove}"
                            Background="#22c55e" Foreground="White" BorderThickness="0" Cursor="Hand"

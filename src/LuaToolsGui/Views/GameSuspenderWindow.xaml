@@ -22,22 +22,22 @@
             </Grid.ColumnDefinitions>
             
             <StackPanel>
-                <TextBlock Text="❄️ Console-Style Game Suspender" FontSize="18" FontWeight="Bold" Margin="0,0,0,5"/>
-                <TextBlock Text="Bekukan memori game ke 0% CPU secara paksa." Foreground="#9ca3af" FontSize="13"/>
+                <TextBlock Text="Console-Style Game Suspender" FontSize="18" FontWeight="Bold" Margin="0,0,0,5"/>
+                <TextBlock Text="Suspend game processes to 0% CPU usage." Foreground="#9ca3af" FontSize="13"/>
             </StackPanel>
             
             <Button Grid.Column="1" Command="{Binding RefreshProcessesCommand}"
-                    Content="🔄 Refresh"
+                    Content="Refresh"
                     Background="#2a2a35" Foreground="White" FontSize="13" FontWeight="Bold" BorderThickness="0" Cursor="Hand" Padding="15,8" VerticalAlignment="Center"/>
         </Grid>
 
         <!-- Warning Alert -->
         <Border Grid.Row="1" Background="#4f191b" BorderThickness="0" CornerRadius="8" Padding="15" Margin="0,0,0,15">
             <StackPanel Orientation="Horizontal">
-                <TextBlock Text="⚠️" FontSize="20" VerticalAlignment="Center" Margin="0,0,15,0"/>
+                
                 <StackPanel VerticalAlignment="Center" MaxWidth="480">
-                    <TextBlock Text="PERINGATAN KERAS!" FontWeight="Bold" Foreground="#f87171" FontSize="14"/>
-                    <TextBlock Text="Hanya gunakan ini untuk Game Single-Player / Offline. Jika kamu membekukan Game Multiplayer/Online (Valorant, CS2), kamu akan langsung RTO dan DISCONNECT dari server!" Foreground="#fca5a5" TextWrapping="Wrap" FontSize="12" Margin="0,2,0,0"/>
+                    <TextBlock Text="WARNING!" FontWeight="Bold" Foreground="#f87171" FontSize="14"/>
+                    <TextBlock Text="Only use this for Single-Player / Offline games. Suspending Multiplayer/Online games will cause connection timeouts and disconnections." Foreground="#fca5a5" TextWrapping="Wrap" FontSize="12" Margin="0,2,0,0"/>
                 </StackPanel>
             </StackPanel>
         </Border>

@@ -16,7 +16,7 @@ public partial class SymlinkMoverViewModel : ObservableObject
     public string CurrentPath { get; }
 
     [ObservableProperty] private string _destinationPath = "";
-    [ObservableProperty] private string _statusMessage = "Pilih lokasi disk baru untuk memindahkan game ini.";
+    [ObservableProperty] private string _statusMessage = "Select a new disk location to move this game.";
     
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsNotMoving))]
@@ -43,13 +43,13 @@ public partial class SymlinkMoverViewModel : ObservableObject
 
     private async void CalculateSizeAsync()
     {
-        StatusMessage = "Menghitung ukuran game...";
+        StatusMessage = "Calculating game size...";
         await Task.Run(() =>
         {
             _totalSizeBytes = GetDirectorySize(new DirectoryInfo(CurrentPath));
         });
         TotalSizeString = FormatSize(_totalSizeBytes);
-        StatusMessage = $"Ukuran Game: {TotalSizeString}. Pilih lokasi disk baru.";
+        StatusMessage = $"Game size: {TotalSizeString}. Select new disk location.";
     }
 
     [RelayCommand]
@@ -60,7 +60,7 @@ public partial class SymlinkMoverViewModel : ObservableObject
         // Let's use OpenFolderDialog which was added in .NET 8 / Win10! Wait, OpenFolderDialog is .NET 8 WPF!
         var dialog = new Microsoft.Win32.OpenFolderDialog
         {
-            Title = "Pilih Folder Tujuan Baru"
+            Title = "Select New Destination Folder"
         };
 
         if (dialog.ShowDialog() == true)
@@ -73,28 +73,28 @@ public partial class SymlinkMoverViewModel : ObservableObject
                 var drive = new DriveInfo(Path.GetPathRoot(DestinationPath)!);
                 if (drive.AvailableFreeSpace < _totalSizeBytes)
                 {
-                    StatusMessage = $"Ruang tidak cukup di {drive.Name}. Sisa: {FormatSize(drive.AvailableFreeSpace)}";
+                    StatusMessage = $"Not enough space on {drive.Name}. Free: {FormatSize(drive.AvailableFreeSpace)}";
                     CanMove = false;
                 }
                 else if (DestinationPath.StartsWith(CurrentPath, StringComparison.OrdinalIgnoreCase))
                 {
-                    StatusMessage = "Lokasi baru tidak boleh berada di dalam folder yang sama!";
+                    StatusMessage = "New location cannot be inside the current folder!";
                     CanMove = false;
                 }
                 else if (CurrentPath.StartsWith(DestinationPath, StringComparison.OrdinalIgnoreCase))
                 {
-                    StatusMessage = "Lokasi lama tidak boleh berada di dalam folder baru!";
+                    StatusMessage = "Current location cannot be inside the new folder!";
                     CanMove = false;
                 }
                 else
                 {
-                    StatusMessage = $"Ruang tersedia cukup ({FormatSize(drive.AvailableFreeSpace)}). Siap dipindahkan!";
+                    StatusMessage = $"Sufficient disk space ({FormatSize(drive.AvailableFreeSpace)}). Ready to move!";
                     CanMove = true;
                 }
             }
             catch (Exception ex)
             {
-                StatusMessage = "Folder tidak valid.";
+                StatusMessage = "Invalid folder.";
                 CanMove = false;
             }
         }
@@ -115,18 +115,18 @@ public partial class SymlinkMoverViewModel : ObservableObject
             try
             {
                 // 1. Pindahkan folder menggunakan metode rekursif dengan progress
-                Application.Current.Dispatcher.Invoke(() => StatusMessage = "Memindahkan file...");
+                Application.Current.Dispatcher.Invoke(() => StatusMessage = "Moving files...");
                 MoveDirectoryWithProgress(CurrentPath, targetDir);
 
                 // 2. Hapus direktori lama sepenuhnya (karena Directory.Move gagal beda volume)
-                Application.Current.Dispatcher.Invoke(() => StatusMessage = "Menghapus sisa folder lama...");
+                Application.Current.Dispatcher.Invoke(() => StatusMessage = "Cleaning up old directory...");
                 if (Directory.Exists(CurrentPath))
                 {
                     Directory.Delete(CurrentPath, true);
                 }
 
                 // 3. Buat Symlink (Junction)
-                Application.Current.Dispatcher.Invoke(() => StatusMessage = "Membuat Symlink (Junction)...");
+                Application.Current.Dispatcher.Invoke(() => StatusMessage = "Creating Symlink (Junction)...");
                 
                 var process = new Process
                 {
@@ -143,20 +143,20 @@ public partial class SymlinkMoverViewModel : ObservableObject
 
                 if (process.ExitCode != 0)
                 {
-                    Application.Current.Dispatcher.Invoke(() => StatusMessage = "Gagal membuat Symlink! Tapi file sudah dipindah.");
+                    Application.Current.Dispatcher.Invoke(() => StatusMessage = "Failed to create Symlink! But files were moved successfully.");
                     return;
                 }
 
-                Application.Current.Dispatcher.Invoke(() => StatusMessage = "Selesai! Game berhasil dipindah dan Symlink telah dibuat.");
+                Application.Current.Dispatcher.Invoke(() => StatusMessage = "Done! Game successfully moved and Symlink created.");
             }
             catch (Exception ex)
             {
-                Application.Current.Dispatcher.Invoke(() => StatusMessage = $"Gagal: {ex.Message}");
+                Application.Current.Dispatcher.Invoke(() => StatusMessage = $"Failed: {ex.Message}");
             }
         });
 
         // Tunggu bentar lalu tutup
-        if (StatusMessage.StartsWith("Selesai"))
+        if (StatusMessage.StartsWith("Done!"))
         {
             await Task.Delay(2000);
             CloseWindow?.Invoke();
@@ -192,7 +192,7 @@ public partial class SymlinkMoverViewModel : ObservableObject
                 Application.Current.Dispatcher.Invoke(() => 
                 {
                     ProgressPercentage = ((double)copied / _totalSizeBytes) * 100;
-                    StatusMessage = $"Memindahkan: {FormatSize(copied)} / {TotalSizeString}";
+                    StatusMessage = $"Moving: {FormatSize(copied)} / {TotalSizeString}";
                 });
             }
         }

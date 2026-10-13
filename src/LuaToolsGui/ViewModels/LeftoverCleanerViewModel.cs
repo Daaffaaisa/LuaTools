@@ -84,7 +84,7 @@ public partial class LeftoverCleanerViewModel : ObservableObject
 
                         if (cleanFolder == cleanGame || cleanGame.StartsWith(cleanFolder) || cleanFolder.StartsWith(cleanGame))
                         {
-                            AddLeftoverItem(d, "Sisa Instalasi Game / Mod (Aman dihapus karena game sudah Uninstalled)");
+                            AddLeftoverItem(d, "Game / Mod leftovers (Safe to remove as game is uninstalled)");
                         }
                     }
                 }
@@ -223,9 +223,9 @@ public partial class LeftoverCleanerViewModel : ObservableObject
         IsScanning = false;
         
         if (Leftovers.Count == 0)
-            StatusMessage = "Wah! Komputermu sudah bersih. Tidak ada file sampah yang tersisa.";
+            StatusMessage = "All clean! No leftover files found.";
         else
-            StatusMessage = $"Menemukan {Leftovers.Count} lokasi sampah. Pilih yang ingin dihapus!";
+            StatusMessage = $"Found {Leftovers.Count} leftover location(s). Select items to delete.";
     }
 
     private void AddLeftoverItem(string folderPath, string desc)
@@ -278,7 +278,7 @@ public partial class LeftoverCleanerViewModel : ObservableObject
         var toDelete = Leftovers.Where(x => x.IsSelected).ToList();
         if (toDelete.Count == 0) return;
 
-        StatusMessage = "Sedang menghapus...";
+        StatusMessage = "Deleting...";
         IsScanning = true;
 
         await Task.Run(() =>
@@ -295,7 +295,7 @@ public partial class LeftoverCleanerViewModel : ObservableObject
         });
 
         IsScanning = false;
-        StatusMessage = $"Berhasil menghapus {toDelete.Count} sampah!";
+        StatusMessage = $"Successfully deleted {toDelete.Count} leftover item(s)!";
         
         // Remove from UI
         foreach (var item in toDelete) Leftovers.Remove(item);

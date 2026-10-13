@@ -15,14 +15,14 @@ public partial class SettingsViewModel
         string key = NexusKeyInput.Trim();
         if (string.IsNullOrEmpty(key))
         {
-            NexusKeyStatus = "API Key tidak boleh kosong.";
+            NexusKeyStatus = "API Key cannot be empty.";
             return;
         }
 
         _settings.NexusApiKey = key;
         NexusIsKeyConfigured = true;
         NexusKeyInput = "";
-        NexusKeyStatus = "API Key berhasil disimpan.";
+        NexusKeyStatus = "API Key successfully saved.";
     }
 
     [RelayCommand]

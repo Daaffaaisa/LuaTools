@@ -55,7 +55,7 @@ public class ModExtractionService
                     string? installDir = _steamLibrary.GetInstallDir(rule.AppId);
                     if (string.IsNullOrEmpty(installDir) || !Directory.Exists(installDir))
                     {
-                        return (false, $"Game belum di-install atau tidak ditemukan oleh Steam (AppID: {rule.AppId}).", null, null);
+                        return (false, $"Game is not installed or not detected by Steam (AppID: {rule.AppId}).", null, null);
                     }
                     targetDir = Path.Combine(installDir, rule.RelativeTargetFolder);
                 }
@@ -154,7 +154,7 @@ public class ModExtractionService
             }
             catch (Exception ex)
             {
-                return (false, $"Gagal mengekstrak: {ex.Message}", null, null);
+                return (false, $"Failed to extract: {ex.Message}", null, null);
             }
         });
     }

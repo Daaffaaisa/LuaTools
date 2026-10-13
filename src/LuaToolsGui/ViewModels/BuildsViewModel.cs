@@ -103,7 +103,7 @@ public record DepotRow(
         ManifestId is not null ? string.Format(Resources.Strings.Builds_Manifest, ManifestId)
         : CommentedManifestId is not null
             ? string.Format(Resources.Strings.Builds_Manifest, CommentedManifestId) +
-              "  ·  " + Resources.Strings.Builds_PinDisabled
+              "  \u00b7  " + Resources.Strings.Builds_PinDisabled
             : null;
 
     public bool HasManifest => ManifestLabel is not null;
@@ -159,7 +159,7 @@ public partial class VariantRowViewModel : ObservableObject
             if (!string.IsNullOrWhiteSpace(Variant.Source))
                 parts.Add(string.Format(Resources.Strings.Builds_Source, Variant.Source));
             if (HasPendingEdit) parts.Add(Resources.Strings.Builds_Meta_Unsaved);
-            return string.Join("  ·  ", parts);
+            return string.Join("  \u00b7  ", parts);
         }
     }
 
@@ -1205,9 +1205,9 @@ public partial class BuildsViewModel : PagedListViewModel<LuaTileViewModel>
     public bool HasUnknown => Unknown.Count > 0;
     public int MissingDlcCount => Missing.Count(r => r.IsDlc);
     public bool HasMissingDlcs => MissingDlcCount > 0;
-    public string InLuaToggleLabel => $"{(IsInLuaExpanded ? "▾" : "▸")} {Resources.Strings.Manage_Toggle_InLua}";
-    public string MissingToggleLabel => $"{(IsMissingExpanded ? "▾" : "▸")} {Resources.Strings.Manage_Toggle_Missing}";
-    public string UnknownToggleLabel => $"{(IsUnknownExpanded ? "▾" : "▸")} {Resources.Strings.Manage_Toggle_Unknown}";
+    public string InLuaToggleLabel => $"{(IsInLuaExpanded ? "\u25be" : "\u25b8")} {Resources.Strings.Manage_Toggle_InLua}";
+    public string MissingToggleLabel => $"{(IsMissingExpanded ? "\u25be" : "\u25b8")} {Resources.Strings.Manage_Toggle_Missing}";
+    public string UnknownToggleLabel => $"{(IsUnknownExpanded ? "\u25be" : "\u25b8")} {Resources.Strings.Manage_Toggle_Unknown}";
 
     partial void OnInLuaChanged(IReadOnlyList<DepotRow> value)
     { OnPropertyChanged(nameof(InLuaCount)); OnPropertyChanged(nameof(HasInLua)); }
@@ -1621,9 +1621,9 @@ public partial class BuildsViewModel : PagedListViewModel<LuaTileViewModel>
                     : d.IsShared ? Resources.Strings.Manage_SharedDepot : Resources.Strings.Manage_Depot);
 
             var meta = new List<string> { d.Id.ToString() };
-            if (d.IsDlc)
+            if (d.IsDlc && d.Size > 0)
             {
-                meta.Add(d.Size > 0 ? $"Files: {FormatSize(d.Size)}" : "License Only");
+                meta.Add($"Files: {FormatSize(d.Size)}");
             }
             else if (d.Size > 0)
             {
@@ -1642,7 +1642,7 @@ public partial class BuildsViewModel : PagedListViewModel<LuaTileViewModel>
             declared.TryGetValue(declId, out var entry);
             bool inLua = entry is not null;
 
-            return new DepotRow(d.Id, title, string.Join("  ·  ", meta), d.IsDlc, d.IsShared, url,
+            return new DepotRow(d.Id, title, string.Join("  \u00b7  ", meta), d.IsDlc, d.IsShared, url,
                 entry?.ManifestId, entry?.CommentedManifestId, d.PublicManifestId,
                 IsInLua: inLua,
                 IsEnabled: active.Contains(declId),

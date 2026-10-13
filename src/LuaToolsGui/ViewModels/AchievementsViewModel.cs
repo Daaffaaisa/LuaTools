@@ -99,7 +99,7 @@ public partial class AchievementsViewModel : ObservableObject
 
     public void LoadGame(uint appId, string gameName)
     {
-        GameTitle = $"Memanajemen Achievement: {gameName}";
+        GameTitle = $"Manage Achievements: {gameName}";
         Achievements.Clear();
 
         if (_achievementService.ConnectToGame(appId, out string errorMsg))
@@ -130,7 +130,7 @@ public partial class AchievementsViewModel : ObservableObject
         }
         else
         {
-            GameTitle = $"Gagal terhubung: {errorMsg}";
+            GameTitle = $"Failed to connect: {errorMsg}";
         }
     }
 

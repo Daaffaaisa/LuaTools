@@ -17,7 +17,7 @@ public partial class FixGameCardVm(DenuvoGameListing g) : ObservableObject
     public string? HeaderImage { get; } = g.HeaderImage;
     public int FixCount { get; } = g.FixCount;
     public IReadOnlyList<string> TagIds { get; } = g.Tags.Select(t => t.Id).ToList();
-    public string FixCountLabel => string.Format(Resources.Strings.Fixes_Count, FixCount);
+    public string FixCountLabel => AppId == "UNIVERSAL" ? "Community Search" : string.Format(Resources.Strings.Fixes_Count, FixCount);
 
     /// <summary>Local cached cover path (set after CoverCache resolves it); bound via ImagePathToSource.</summary>
     [ObservableProperty] private string? _cover;
@@ -182,7 +182,7 @@ public partial class FixesViewModel : PagedListViewModel<FixGameCardVm>
     /// </summary>
     /// <remarks>
     /// The count must be the INTERSECTION, not <c>_installedAppIds.Count</c>. The string reads "{0} of
-    /// your games have fixes", but the raw count is every game with a lua added — so a library with 243
+    /// your games have fixes", but the raw count is every game with a lua added â€” so a library with 243
     /// added games advertised 243 fixes while the filtered grid showed a dozen. This mirrors exactly what
     /// <c>ApplyFilter</c> puts on screen when My games is on.
     /// </remarks>
@@ -202,7 +202,7 @@ public partial class FixesViewModel : PagedListViewModel<FixGameCardVm>
     {
         if (value)
         {
-            SelectedTagId = null; // one filter at a time — turning "my games" on drops any tag
+            SelectedTagId = null; // one filter at a time â€” turning "my games" on drops any tag
             foreach (var pill in Tags) pill.IsSelected = false;
         }
         ApplyFilter();
@@ -231,7 +231,7 @@ public partial class FixesViewModel : PagedListViewModel<FixGameCardVm>
             if (results.Count == 0)
             {
                 IsGcwManualSearchVisible = true;
-                toast.Show("GCW", "Fix otomatis tidak ditemukan. Silakan edit judul dan coba lagi.", error: true);
+                toast.Show("GCW", "No automatic fixes found. Please refine search title and try again.", error: true);
             }
             else
             {
@@ -240,7 +240,7 @@ public partial class FixesViewModel : PagedListViewModel<FixGameCardVm>
         }
         catch (System.Exception ex)
         {
-            toast.Show("Error GCW", "Gagal scraping: " + ex.Message, error: true);
+            toast.Show("GCW Error", "Failed to search GCW: " + ex.Message, error: true);
         }
         finally
         {
@@ -253,7 +253,7 @@ public partial class FixesViewModel : PagedListViewModel<FixGameCardVm>
     {
         if (SelectedGame is not { } game) return;
 
-        toast.Show("GCW", "Mencari link direct download...");
+        toast.Show("GCW", "Resolving direct download mirror...");
         IsSearchingGcw = true;
         
         try
@@ -263,7 +263,7 @@ public partial class FixesViewModel : PagedListViewModel<FixGameCardVm>
             
             string finalArchiveUrl = await scraper.GetDirectDownloadUrlAsync(fix.MirrorPageUrl);
             
-            toast.Show("GCW", "Mendownload file archive...");
+            toast.Show("GCW", "Downloading archive file...");
             string tempFile = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "gcw_fix_" + System.Guid.NewGuid() + ".rar");
             
             var req = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Get, finalArchiveUrl);
@@ -278,7 +278,7 @@ public partial class FixesViewModel : PagedListViewModel<FixGameCardVm>
                 await res.Content.CopyToAsync(fs);
             }
             
-            toast.Show("GCW", "Mengekstrak fix ke folder game...");
+            toast.Show("GCW", "Extracting fix to game folder...");
             var extractor = new LuaToolsGui.Services.ModExtractionService(library, settings);
             
             string targetDir = null;
@@ -286,7 +286,7 @@ public partial class FixesViewModel : PagedListViewModel<FixGameCardVm>
             {
                 var dialog = new Microsoft.Win32.OpenFolderDialog
                 {
-                    Title = "Pilih folder instalasi game tujuan untuk mengekstrak Fix"
+                    Title = "Select game installation folder to extract fix"
                 };
                 if (dialog.ShowDialog() == true)
                 {
@@ -307,18 +307,18 @@ public partial class FixesViewModel : PagedListViewModel<FixGameCardVm>
             
             if (success)
             {
-                toast.Show("GCW Berhasil!", $"Fix berhasil dipasang ke game!");
+                toast.Show("GCW Success", "Fix successfully installed to game folder!");
             }
             else
             {
-                toast.Show("GCW Ekstrak Gagal", errorMsg ?? "Unknown error", error: true);
+                toast.Show("GCW Extraction Failed", errorMsg ?? "Unknown error", error: true);
             }
             
             try { System.IO.File.Delete(tempFile); } catch { }
         }
         catch (System.Exception ex)
         {
-            toast.Show("Error GCW", "Gagal mendownload fix: " + ex.Message, error: true);
+            toast.Show("GCW Error", "Failed to download fix: " + ex.Message, error: true);
         }
         finally
         {
@@ -368,7 +368,7 @@ public partial class FixesViewModel : PagedListViewModel<FixGameCardVm>
             var universalGame = new LuaToolsGui.Models.DenuvoGameListing
             {
                 AppId = "UNIVERSAL",
-                Name = "Cari Game Lain (GCW Universal)",
+                Name = "Search Other Games (GCW Universal)",
                 FixCount = 0
             };
             _allGames.Insert(0, new FixGameCardVm(universalGame));
@@ -412,7 +412,7 @@ public partial class FixesViewModel : PagedListViewModel<FixGameCardVm>
     private void SelectTag(string? tagId)
     {
         SelectedTagId = SelectedTagId == tagId ? null : tagId; // toggle off when re-clicked
-        if (MyGamesOnly) MyGamesOnly = false; // one filter at a time — picking a tag drops "my games"
+        if (MyGamesOnly) MyGamesOnly = false; // one filter at a time â€” picking a tag drops "my games"
         foreach (var pill in Tags) pill.IsSelected = pill.Id == SelectedTagId;
         ApplyFilter();
     }
@@ -460,7 +460,7 @@ public partial class FixesViewModel : PagedListViewModel<FixGameCardVm>
     }
 
     /// <summary>
-    /// Open the game's Steam install folder — where <c>ApplyDenuvoFix</c> extracts a fix to.
+    /// Open the game's Steam install folder â€” where <c>ApplyDenuvoFix</c> extracts a fix to.
     /// </summary>
     /// <remarks>
     /// Resolved on click, not bound to a property: <c>GetInstallDir</c> walks libraryfolders.vdf and the
@@ -509,7 +509,7 @@ public partial class FixesViewModel : PagedListViewModel<FixGameCardVm>
                 _allFixes = data.Fixes.Select(f => new FixItemVm(f)).ToList();
 
                 // Is the game on disk? GetInstallDir walks libraryfolders.vdf + appmanifest_*.acf, so
-                // it's file I/O — off the UI thread. Resolved once here rather than per fix row.
+                // it's file I/O â€” off the UI thread. Resolved once here rather than per fix row.
                 string? installDir = long.TryParse(game.AppId, out long gameAppId)
                     ? await Task.Run(() => library.GetInstallDir(gameAppId))
                     : null;

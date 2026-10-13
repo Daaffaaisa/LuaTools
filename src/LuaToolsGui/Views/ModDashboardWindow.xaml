@@ -30,7 +30,7 @@
             <!-- Folder Settings -->
             <ui:Card Grid.Row="1" Margin="0,0,0,15" Background="#11FFFFFF" BorderBrush="#33FFFFFF">
                 <StackPanel>
-                    <TextBlock Text="Direktori Mod Aktif (Target Ekstrak):" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,8"/>
+                    <TextBlock Text="Active Mod Directory (Extraction Target):" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,8"/>
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
@@ -46,9 +46,9 @@
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
                         </ComboBox>
-                        <ui:Button Grid.Column="1" Margin="10,0,0,0" Icon="{ui:SymbolIcon FolderAdd24}" Click="AddFolder_Click" Content="Tambah Path"/>
+                        <ui:Button Grid.Column="1" Margin="10,0,0,0" Icon="{ui:SymbolIcon FolderAdd24}" Click="AddFolder_Click" Content="Add Path"/>
                     </Grid>
-                    <CheckBox x:Name="DefaultCheckBox" Content="Selalu gunakan direktori ini sebagai Default" Margin="0,10,0,0" 
+                    <CheckBox x:Name="DefaultCheckBox" Content="Always use this directory as Default" Margin="0,10,0,0" 
                               Foreground="White" Checked="DefaultCheckBox_Changed" Unchecked="DefaultCheckBox_Changed"/>
                 </StackPanel>
             </ui:Card>
@@ -60,7 +60,7 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <TextBlock Text="Mod Terpasang:" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,10"/>
+                    <TextBlock Text="Installed Mods:" FontWeight="SemiBold" Foreground="White" Margin="0,0,0,10"/>
                     
                     <ListView x:Name="ModsList" Grid.Row="1" Background="Transparent" BorderThickness="0" Foreground="White" ScrollViewer.VerticalScrollBarVisibility="Auto">
                         <ListView.ItemTemplate>
@@ -83,7 +83,7 @@
                                         </StackPanel>
                                     </StackPanel>
                                     
-                                    <ui:ToggleSwitch Grid.Column="2" IsChecked="{Binding IsEnabled}" Content="Aktif" 
+                                    <ui:ToggleSwitch Grid.Column="2" IsChecked="{Binding IsEnabled}" Content="Enabled" 
                                                      Margin="10,0,20,0" VerticalAlignment="Center"
                                                      Checked="Mod_Toggled" Unchecked="Mod_Toggled" Tag="{Binding Id}"/>
                                                      
@@ -94,7 +94,7 @@
                         </ListView.ItemTemplate>
                     </ListView>
                     
-                    <TextBlock x:Name="EmptyModsText" Text="Belum ada mod yang terpasang." 
+                    <TextBlock x:Name="EmptyModsText" Text="No mods installed yet." 
                                Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" 
                                Foreground="#888888" Visibility="Collapsed"/>
                 </Grid>
@@ -105,14 +105,14 @@
                     MinHeight="100" AllowDrop="True" Drop="DropZone_Drop" DragEnter="DropZone_DragEnter" DragLeave="DropZone_DragLeave">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Margin="20">
                     <ui:SymbolIcon Symbol="ArrowDownload24" FontSize="32" Foreground="White" Margin="0,0,0,10"/>
-                    <TextBlock Text="Drag &amp; Drop file .zip / .rar mod ke sini untuk Install Manual" Foreground="White" FontWeight="SemiBold"/>
+                    <TextBlock Text="Drag &amp; Drop .zip / .rar mod file here to Install Manually" Foreground="White" FontWeight="SemiBold"/>
                 </StackPanel>
             </Border>
             
             <Grid x:Name="LoadingOverlay" Grid.RowSpan="4" Background="#AA000000" Visibility="Collapsed">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                     <ui:ProgressRing IsIndeterminate="True" Width="50" Height="50" Margin="0,0,0,15"/>
-                    <TextBlock x:Name="LoadingText" Text="Sedang memproses..." Foreground="White" FontWeight="SemiBold" FontSize="16" HorizontalAlignment="Center"/>
+                    <TextBlock x:Name="LoadingText" Text="Processing..." Foreground="White" FontWeight="SemiBold" FontSize="16" HorizontalAlignment="Center"/>
                 </StackPanel>
             </Grid>
             

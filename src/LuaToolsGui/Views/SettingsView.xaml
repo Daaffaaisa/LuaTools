@@ -630,7 +630,7 @@
             </Border>
 
             <!-- App Updates -->
-            <TextBlock Style="{StaticResource SectionHeader}" Text="Update Aplikasi" />
+            <TextBlock Style="{StaticResource SectionHeader}" Text="App Updates" />
             <Border Style="{StaticResource SettingsCard}">
                 <Grid Margin="14,12">
                     <Grid.ColumnDefinitions>
@@ -641,12 +641,12 @@
                         <TextBlock
                             FontSize="13"
                             FontWeight="Medium"
-                            Text="Periksa Pembaruan" />
+                            Text="Check for Updates" />
                         <TextBlock
                             Margin="0,4,0,0"
                             FontSize="12"
                             Foreground="#6b7280"
-                            Text="Cek pembaruan aplikasi secara manual dan pasang versi terbaru."
+                            Text="Manually check for application updates and install the latest release."
                             TextWrapping="Wrap" />
                     </StackPanel>
                     <ui:Button
@@ -656,7 +656,7 @@
                         Appearance="Primary"
                         Command="{Binding CheckForUpdatesCommand}"
                         Icon="{ui:SymbolIcon ArrowDownload24}"
-                        Content="Cek Update" />
+                        Content="Check for Updates" />
                 </Grid>
             </Border>
         </StackPanel>

@@ -248,24 +248,24 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private async Task CheckForUpdatesAsync()
     {
-        _toast.Show("Update", "Memeriksa pembaruan aplikasi...");
+        _toast.Show("Update", "Checking for application updates...");
         try
         {
             await _updates.CheckAndStageAsync();
             if (_updates.HasStagedUpdate)
             {
-                _toast.Show("Update", "Memasang update dan merestart...");
+                _toast.Show("Update", "Installing update and restarting...");
                 await Task.Delay(1500);
                 _updates.ApplyAndRestart();
             }
             else
             {
-                _toast.Show("Update", "Aplikasi sudah dalam versi terbaru.");
+                _toast.Show("Update", "Application is already up to date.");
             }
         }
         catch (Exception ex)
         {
-            _toast.Show("Update", "Gagal memeriksa pembaruan: " + ex.Message, error: true);
+            _toast.Show("Update", "Failed to check for updates: " + ex.Message, error: true);
         }
     }
 
