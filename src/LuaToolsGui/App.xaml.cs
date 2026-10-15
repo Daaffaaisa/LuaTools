@@ -75,6 +75,7 @@ public partial class App : Application
                 services.AddSingleton<DownloadViewModel>();
                 services.AddSingleton<SettingsViewModel>();
                 services.AddSingleton<ManageViewModel>();
+                services.AddSingleton<SteamLibraryViewModel>();
                 services.AddSingleton<BuildsViewModel>();
                 services.AddTransient<LaunchOptionsViewModel>(); // one per dialog
                 services.AddSingleton<HomeViewModel>();
@@ -86,6 +87,7 @@ public partial class App : Application
                 services.AddSingleton<MainViewModel>();
                 // Pages resolved by NavigationView via the DI service provider.
                 services.AddSingleton<HomeView>();
+                services.AddSingleton<SteamLibraryView>();
                 services.AddSingleton<DownloadView>();
                 services.AddSingleton<DownloadsView>();
                 services.AddSingleton<ManageView>();
@@ -457,7 +459,7 @@ public partial class App : Application
                 if (!existingProcess.HasExited)
                 {
                     var toast = _host.Services.GetRequiredService<ToastService>();
-                    toast.Show("Perhatian", "Achievement Manager untuk game ini sudah terbuka!", error: true);
+                    toast.Show("Notice", "Achievement Manager for this game is already open!", error: true);
                     return;
                 }
                 else
@@ -479,6 +481,101 @@ public partial class App : Application
                 _activeSamWorkers[appId] = process;
             }
         });
+
+        // Steam Library page wiring
+        var steamLib = _host.Services.GetRequiredService<SteamLibraryViewModel>();
+
+        steamLib.OpenLaunchOptions = (appId, name) => Dispatcher.Invoke(() =>
+        {
+            var dialog = new LaunchOptionsDialog(
+                _host.Services.GetRequiredService<LaunchOptionsViewModel>(), appId, name)
+            { Owner = window };
+            dialog.ShowDialog();
+        });
+
+        steamLib.OpenAchievements = (appId, name) => Dispatcher.Invoke(() =>
+        {
+            if (_activeSamWorkers.TryGetValue(appId, out var existingProcess))
+            {
+                if (!existingProcess.HasExited)
+                {
+                    var toast = _host.Services.GetRequiredService<ToastService>();
+                    toast.Show("Notice", "Achievement Manager for this game is already open!", error: true);
+                    return;
+                }
+                else
+                {
+                    _activeSamWorkers.Remove(appId);
+                }
+            }
+
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = System.Environment.ProcessPath!,
+                Arguments = $"--sam-worker {appId} \"{name}\"",
+                UseShellExecute = false
+            };
+            var process = System.Diagnostics.Process.Start(psi);
+            if (process != null)
+            {
+                _activeSamWorkers[appId] = process;
+            }
+        });
+
+        steamLib.OpenModSettings = (item) => Dispatcher.Invoke(() =>
+        {
+            var settings = _host.Services.GetRequiredService<Services.SettingsService>();
+            var toastService = _host.Services.GetRequiredService<Services.ToastService>();
+
+            string guessDomain = item.Name.Replace(" ", "").Replace(":", "").Replace("-", "").Replace("'", "").ToLower();
+
+            if (!settings.ModDirectories.ContainsKey(guessDomain))
+            {
+                settings.ModDirectories[guessDomain] = new System.Collections.Generic.List<string>();
+            }
+            var registry = _host.Services.GetRequiredService<Services.ModRegistryService>();
+            var extractor = _host.Services.GetRequiredService<Services.ModExtractionService>();
+
+            var dialog = new Views.ModDashboardWindow(guessDomain, settings, registry, extractor, toastService)
+            {
+                Owner = window
+            };
+
+            dialog.ShowDialog();
+        });
+
+        steamLib.OpenStorageMover = (item) => Dispatcher.Invoke(() =>
+        {
+            if (string.IsNullOrEmpty(item.InstallDir) || !System.IO.Directory.Exists(item.InstallDir))
+            {
+                System.Windows.MessageBox.Show("Game installation folder was not found. Please verify the game is installed.", "Error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                return;
+            }
+
+            var dummyTile = new ViewModels.LuaTileViewModel(item.AppId, item.LuaPath, DateTime.UtcNow, item.Name, false);
+            var vm = new ViewModels.SymlinkMoverViewModel(dummyTile, item.InstallDir);
+            var dialog = new Views.SymlinkMoverWindow(vm)
+            {
+                Owner = window
+            };
+            dialog.ShowDialog();
+        });
+
+        steamLib.OpenLeftoverCleaner = (item) => Dispatcher.Invoke(() =>
+        {
+            var appInfo = _host.Services.GetRequiredService<Services.SteamAppInfoCache>();
+            var overview = appInfo.GetOverview(item.AppId);
+            var dummyTile = new ViewModels.LuaTileViewModel(item.AppId, item.LuaPath, DateTime.UtcNow, item.Name, false);
+            var vm = new ViewModels.LeftoverCleanerViewModel(dummyTile, overview);
+            var dialog = new Views.LeftoverCleanerWindow(vm)
+            {
+                Owner = window
+            };
+            dialog.ShowDialog();
+        });
+
+        steamLib.NavigateToBuilds = appId =>
+            Dispatcher.Invoke(() => { window.NavigateToBuilds(); _ = builds.SelectAppAsync(appId); });
 
         // Steam regenerates appinfo.vdf from PICS, wiping launch edits. Check once at startup and
         // OFFER to re-apply, never silently, since applying closes Steam.

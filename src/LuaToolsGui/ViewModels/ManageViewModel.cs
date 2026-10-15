@@ -38,6 +38,7 @@ public partial class LuaTileViewModel : ObservableObject
     [ObservableProperty] private string _name;
     [ObservableProperty] private ImageSource? _cover;
     [ObservableProperty] private bool _isSelected;
+    [ObservableProperty] private bool _isOriginal;
 
     /// <summary>True once this app's full details are cached (so filters/sort can use it).</summary>
     [ObservableProperty] private bool _detailsLoaded;
@@ -139,7 +140,7 @@ public partial class LuaTileViewModel : ObservableObject
     }
 
     /// <summary>Decode a local image file into a frozen, thumbnail-sized bitmap (off-UI, lock-free).</summary>
-    private static ImageSource? LoadFrozen(string path)
+    internal static ImageSource? LoadFrozen(string path)
     {
         try
         {
@@ -184,6 +185,7 @@ public partial class ManageViewModel : PagedListViewModel<LuaTileViewModel>
     private readonly ToastService _toast;
     private readonly SettingsService _settings;
     private readonly SteamlessService _steamless;
+    private readonly SteamLibraryService? _library;
 
     private List<LuaTileViewModel> _all = [];
     private CancellationTokenSource? _prefetchCts;
@@ -305,7 +307,7 @@ public partial class ManageViewModel : PagedListViewModel<LuaTileViewModel>
 
     public ManageViewModel(SteamService steam, SteamAppListCache appList, SteamAppInfoCache appInfo,
         CoverCache covers, ToastService toast, SettingsService settings,
-        SteamlessService steamless)
+        SteamlessService steamless, SteamLibraryService? library = null)
     {
         _steam = steam;
         _appList = appList;
@@ -314,6 +316,7 @@ public partial class ManageViewModel : PagedListViewModel<LuaTileViewModel>
         _toast = toast;
         _settings = settings;
         _steamless = steamless;
+        _library = library;
         InitPageSize(settings.ManagePageSize);
     }
 
@@ -596,6 +599,16 @@ public partial class ManageViewModel : PagedListViewModel<LuaTileViewModel>
             // Bulk game-name list (downloaded once, cached). Gives every game a name with no rate limit.
             await _appList.EnsureLoadedAsync();
 
+            HashSet<long>? installedSteamAppIds = null;
+            if (_library != null)
+            {
+                try
+                {
+                    installedSteamAppIds = _library.EnumerateInstalled().Select(x => x.AppId).ToHashSet();
+                }
+                catch { }
+            }
+
             var tiles = await Task.Run(() =>
                 LuaInstaller.EnumerateInstalled(dir) // shared scan rule (skips Steamtools.lua etc.)
                     .Select(f =>
@@ -605,7 +618,12 @@ public partial class ManageViewModel : PagedListViewModel<LuaTileViewModel>
                         bool placeholder = name is null;
                         // Base = when added to the folder; if edited since (LastWrite later), use that. Newer is more relevant.
                         var added = info.LastWriteTime > info.CreationTime ? info.LastWriteTime : info.CreationTime;
-                        return new LuaTileViewModel(f.AppId, f.Path, added, name ?? string.Format(Resources.Strings.Common_AppFallback, f.AppId), placeholder);
+                        var tile = new LuaTileViewModel(f.AppId, f.Path, added, name ?? string.Format(Resources.Strings.Common_AppFallback, f.AppId), placeholder);
+                        if (installedSteamAppIds != null && installedSteamAppIds.Contains(f.AppId))
+                        {
+                            tile.IsOriginal = true;
+                        }
+                        return tile;
                     })
                     .OrderByDescending(t => t.AddedAt)
                     .ToList());

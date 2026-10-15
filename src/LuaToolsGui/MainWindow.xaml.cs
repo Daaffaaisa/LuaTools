@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using LuaToolsGui.Services;
 using LuaToolsGui.ViewModels;
 using LuaToolsGui.Views;
@@ -123,6 +123,9 @@ public partial class MainWindow : Wpf.Ui.Controls.FluentWindow
 
     /// <summary>Switch to Manage (used by Home's "recently added" cards). Caller opens the detail.</summary>
     public void NavigateToManage() => RootNavigation.Navigate(typeof(ManageView));
+
+    /// <summary>Switch to Steam Library (installed official Steam games).</summary>
+    public void NavigateToSteamLibrary() => RootNavigation.Navigate(typeof(SteamLibraryView));
 
     /// <summary>Switch to Builds (used by the Manage flyout's "Manage Build"). Caller selects the game.</summary>
     public void NavigateToBuilds() => RootNavigation.Navigate(typeof(BuildsView));

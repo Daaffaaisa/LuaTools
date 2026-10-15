@@ -320,11 +320,26 @@
                                     Text="{Binding Name}"
                                     TextTrimming="CharacterEllipsis"
                                     TextWrapping="Wrap" />
-                                <TextBlock
-                                    Margin="0,4,0,0"
-                                    FontSize="11.5"
-                                    Foreground="#6b7280"
-                                    Text="{Binding AppId, StringFormat={x:Static res:Strings.Common_AppId}}" />
+                                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                    <Border
+                                        Margin="0,0,6,0"
+                                        Padding="5,1"
+                                        Background="#15803d"
+                                        CornerRadius="3"
+                                        VerticalAlignment="Center"
+                                        Visibility="{Binding IsOriginal, Converter={StaticResource BoolToVis}}">
+                                        <TextBlock
+                                            FontSize="10"
+                                            FontWeight="Bold"
+                                            Foreground="#dcfce7"
+                                            Text="Original" />
+                                    </Border>
+                                    <TextBlock
+                                        FontSize="11.5"
+                                        Foreground="#6b7280"
+                                        VerticalAlignment="Center"
+                                        Text="{Binding AppId, StringFormat={x:Static res:Strings.Common_AppId}}" />
+                                </StackPanel>
                                 <TextBlock
                                     Margin="0,2,0,0"
                                     FontSize="11"
@@ -595,9 +610,23 @@
                                 </ControlTemplate>
                             </Button.Template>
                             <StackPanel Orientation="Horizontal">
+                                <Border
+                                    Margin="0,0,6,0"
+                                    Padding="5,1"
+                                    Background="#15803d"
+                                    CornerRadius="3"
+                                    VerticalAlignment="Center"
+                                    Visibility="{Binding IsOriginal, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock
+                                        FontSize="10"
+                                        FontWeight="Bold"
+                                        Foreground="#dcfce7"
+                                        Text="Original" />
+                                </Border>
                                 <TextBlock
                                     FontSize="12"
                                     Foreground="#9ca3af"
+                                    VerticalAlignment="Center"
                                     Text="{Binding AppId, StringFormat={x:Static res:Strings.Common_AppId}}" />
                                 <ui:SymbolIcon
                                     Margin="6,0,0,0"

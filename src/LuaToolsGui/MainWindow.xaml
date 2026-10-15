@@ -1,4 +1,4 @@
-﻿<ui:FluentWindow
+<ui:FluentWindow
     x:Class="LuaToolsGui.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -60,6 +60,11 @@
                     <ui:NavigationViewItem Content="{x:Static res:Strings.Nav_Home}" TargetPageType="{x:Type views:HomeView}">
                         <ui:NavigationViewItem.Icon>
                             <ui:SymbolIcon Symbol="Home24" />
+                        </ui:NavigationViewItem.Icon>
+                    </ui:NavigationViewItem>
+                    <ui:NavigationViewItem Content="Steam Library" TargetPageType="{x:Type views:SteamLibraryView}">
+                        <ui:NavigationViewItem.Icon>
+                            <ui:SymbolIcon Symbol="Library24" />
                         </ui:NavigationViewItem.Icon>
                     </ui:NavigationViewItem>
                     <ui:NavigationViewItem Content="{x:Static res:Strings.Nav_Add}" TargetPageType="{x:Type views:DownloadView}">
