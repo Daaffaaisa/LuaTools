@@ -1,4 +1,7 @@
+using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 
 namespace LuaToolsGui.Services;
@@ -26,8 +29,14 @@ public partial class SteamLibraryService(SteamService steam)
     [GeneratedRegex(@"""name""\s*""([^""]*)""", RegexOptions.IgnoreCase)]
     private static partial Regex NameRegex();
 
+    [GeneratedRegex(@"^""(\d{17})""", RegexOptions.Multiline)]
+    private static partial Regex SteamId64Regex();
+
     /// <summary>An installed game, as its appmanifest describes it.</summary>
     public record InstalledGame(long AppId, string Name, string InstallDir);
+
+    /// <summary>An owned game from the active user's Steam library.</summary>
+    public record OwnedGame(long AppId, string Name, bool IsInstalled, string? InstallDir);
 
     /// <summary>
     /// Full path to the game's install folder (…\steamapps\common\&lt;installdir&gt;) if it exists on
@@ -128,6 +137,166 @@ public partial class SteamLibraryService(SteamService steam)
         }
     }
 
+    /// <summary>
+    /// Gets the 32-bit AccountID of the currently active/logged-in Steam user.
+    /// Walks config\loginusers.vdf, or probes userdata directories as fallback.
+    /// </summary>
+    public uint? GetActiveAccountId(string? steamRoot = null)
+    {
+        steamRoot ??= steam.EffectivePath;
+        if (steamRoot is null) return null;
+
+        string loginUsersPath = Path.Combine(steamRoot, "config", "loginusers.vdf");
+        if (File.Exists(loginUsersPath))
+        {
+            try
+            {
+                string text = File.ReadAllText(loginUsersPath);
+
+                // Priority 1: user block with "mostrecent" "1"
+                var mostRecent = Regex.Match(text, @"(?si)""(\d{17})""\s*\{[^}]*?""mostrecent""\s*""1""");
+                if (mostRecent.Success && ulong.TryParse(mostRecent.Groups[1].Value, out ulong sid1))
+                {
+                    return (uint)(sid1 & 0xFFFFFFFFUL);
+                }
+
+                // Priority 2: user block with "AutoLogin" "1"
+                var autoLogin = Regex.Match(text, @"(?si)""(\d{17})""\s*\{[^}]*?""AutoLogin""\s*""1""");
+                if (autoLogin.Success && ulong.TryParse(autoLogin.Groups[1].Value, out ulong sid2))
+                {
+                    return (uint)(sid2 & 0xFFFFFFFFUL);
+                }
+
+                // Priority 3: first 17-digit SteamID64 in loginusers.vdf
+                var first = SteamId64Regex().Match(text);
+                if (first.Success && ulong.TryParse(first.Groups[1].Value, out ulong sid3))
+                {
+                    return (uint)(sid3 & 0xFFFFFFFFUL);
+                }
+            }
+            catch { }
+        }
+
+        // Fallback: look at folders in steamRoot\userdata\
+        string userdataDir = Path.Combine(steamRoot, "userdata");
+        if (Directory.Exists(userdataDir))
+        {
+            try
+            {
+                foreach (var dir in Directory.EnumerateDirectories(userdataDir))
+                {
+                    string folderName = Path.GetFileName(dir);
+                    if (uint.TryParse(folderName, out uint id) && id > 0)
+                    {
+                        if (Directory.Exists(Path.Combine(dir, "config", "librarycache")) ||
+                            File.Exists(Path.Combine(dir, "config", "localconfig.vdf")))
+                        {
+                            return id;
+                        }
+                    }
+                }
+            }
+            catch { }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Enumerates all game AppIDs owned by the user via local Steam library cache & config files.
+    /// </summary>
+    public HashSet<long> EnumerateOwnedAppIds(string? steamRoot = null, uint? accountId = null)
+    {
+        var result = new HashSet<long>();
+        steamRoot ??= steam.EffectivePath;
+        if (steamRoot is null) return result;
+
+        accountId ??= GetActiveAccountId(steamRoot);
+
+        // 1. Scan userdata\<accountId>\config\librarycache\*.json
+        if (accountId.HasValue)
+        {
+            string cacheDir = Path.Combine(steamRoot, "userdata", accountId.Value.ToString(), "config", "librarycache");
+            if (Directory.Exists(cacheDir))
+            {
+                try
+                {
+                    foreach (string file in Directory.EnumerateFiles(cacheDir, "*.json"))
+                    {
+                        string baseName = Path.GetFileNameWithoutExtension(file);
+                        if (long.TryParse(baseName, out long appId) && appId > 0)
+                        {
+                            result.Add(appId);
+                        }
+                    }
+                }
+                catch { }
+            }
+
+            // 2. Scan userdata\<accountId>\config\localconfig.vdf
+            string localConfig = Path.Combine(steamRoot, "userdata", accountId.Value.ToString(), "config", "localconfig.vdf");
+            if (File.Exists(localConfig))
+            {
+                try
+                {
+                    string text = File.ReadAllText(localConfig);
+                    var matches = Regex.Matches(text, @"""(\d+)""\s*\{");
+                    foreach (Match m in matches)
+                    {
+                        if (long.TryParse(m.Groups[1].Value, out long id) && id > 10)
+                        {
+                            result.Add(id);
+                        }
+                    }
+                }
+                catch { }
+            }
+        }
+
+        // 3. Include any games currently installed in Steam
+        foreach (var inst in EnumerateInstalled())
+        {
+            result.Add(inst.AppId);
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Enumerates all original owned games for the user, matching with their installed state.
+    /// </summary>
+    public IEnumerable<OwnedGame> EnumerateOwnedGames()
+    {
+        string? steamRoot = steam.EffectivePath;
+        if (steamRoot is null) yield break;
+
+        var installedMap = new Dictionary<long, InstalledGame>();
+        foreach (var inst in EnumerateInstalled())
+        {
+            installedMap[inst.AppId] = inst;
+        }
+
+        var ownedIds = EnumerateOwnedAppIds(steamRoot);
+
+        foreach (var kvp in installedMap)
+        {
+            ownedIds.Add(kvp.Key);
+        }
+
+        foreach (long appId in ownedIds)
+        {
+            if (installedMap.TryGetValue(appId, out var inst))
+            {
+                yield return new OwnedGame(appId, inst.Name, true, inst.InstallDir);
+            }
+            else
+            {
+                yield return new OwnedGame(appId, appId.ToString(), false, null);
+            }
+        }
+    }
+
     /// <summary>VDF strings escape backslashes as "\\"; collapse to a real path.</summary>
     private static string Unescape(string s) => s.Replace(@"\\", @"\");
 }
+

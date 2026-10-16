@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using LuaToolsGui.Services;
 
 namespace LuaToolsGui.ViewModels;
@@ -20,12 +21,18 @@ public partial class SteamLibraryItemVm : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsVanilla))]
     [NotifyPropertyChangedFor(nameof(StatusBadge))]
     [NotifyPropertyChangedFor(nameof(StatusBadgeBackground))]
+    private bool _isInstalled = true;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsVanilla))]
+    [NotifyPropertyChangedFor(nameof(StatusBadge))]
+    [NotifyPropertyChangedFor(nameof(StatusBadgeBackground))]
     private bool _isDlcInjected;
 
-    public bool IsVanilla => !IsDlcInjected;
+    public bool IsVanilla => IsInstalled && !IsDlcInjected;
 
-    public string StatusBadge => IsDlcInjected ? "DLCs Injected" : "Vanilla";
-    public string StatusBadgeBackground => IsDlcInjected ? "#8b5cf6" : "#3b82f6"; // Purple if DLCs injected, Blue if Vanilla
+    public string StatusBadge => !IsInstalled ? "Not Installed" : IsDlcInjected ? "DLCs Injected" : "Original";
+    public string StatusBadgeBackground => !IsInstalled ? "#475569" : IsDlcInjected ? "#8b5cf6" : "#10b981"; // Slate if Not Installed, Purple if DLCs injected, Emerald if Original
 
     [ObservableProperty] private ImageSource? _cover;
     [ObservableProperty] private string? _coverPath;
@@ -33,16 +40,23 @@ public partial class SteamLibraryItemVm : ObservableObject
     [ObservableProperty] private string _formattedSize = "";
     public long SizeOnDisk { get; init; }
 
-    public SteamLibraryItemVm(long appId, string name, string installDir, string stPlugInDir, long sizeOnDisk = 0)
+    public SteamLibraryItemVm(long appId, string name, string installDir, string stPlugInDir, long sizeOnDisk = 0, bool isInstalled = true)
     {
         AppId = appId;
         Name = name;
         InstallDir = installDir;
         StPlugInDir = stPlugInDir;
         SizeOnDisk = sizeOnDisk;
+        IsInstalled = isInstalled;
         
         RefreshStatus();
     }
+
+    [RelayCommand]
+    private void InstallGame() => SteamService.OpenUrl($"steam://install/{AppId}");
+
+    [RelayCommand]
+    private void PlayGame() => SteamService.OpenUrl($"steam://run/{AppId}");
 
     public void RefreshStatus()
     {

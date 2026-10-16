@@ -135,6 +135,41 @@ public class SteamLibraryViewModelTests
     }
 
     [Fact]
+    public void SteamLibraryViewModel_Filtering_InstalledAndNotInstalledFilters()
+    {
+        var items = new List<SteamLibraryItemVm>
+        {
+            new(1091500, "Cyberpunk 2077", @"C:\Games\Cyberpunk", "", isInstalled: true) { IsDlcInjected = true },
+            new(1245620, "Elden Ring", @"C:\Games\Elden Ring", "", isInstalled: true) { IsDlcInjected = false },
+            new(570, "Dota 2", "", "", isInstalled: false)
+        };
+
+        var vm = new SteamLibraryViewModel();
+        vm.SetTestGames(items);
+
+        Assert.Equal(3, vm.TotalGamesCount);
+        Assert.Equal(2, vm.InstalledCount);
+        Assert.Equal(1, vm.NotInstalledCount);
+        Assert.Equal(1, vm.InjectedCount);
+        Assert.Equal(1, vm.VanillaCount);
+
+        // Filter Installed
+        vm.SetFilterCommand.Execute("Installed");
+        Assert.Equal(SteamLibraryFilter.Installed, vm.CurrentFilter);
+        Assert.True(vm.IsFilterInstalled);
+        Assert.Equal(2, vm.FilteredGames.Count);
+        Assert.All(vm.FilteredGames, g => Assert.True(g.IsInstalled));
+
+        // Filter Not Installed
+        vm.SetFilterCommand.Execute("NotInstalled");
+        Assert.Equal(SteamLibraryFilter.NotInstalled, vm.CurrentFilter);
+        Assert.True(vm.IsFilterNotInstalled);
+        Assert.Single(vm.FilteredGames);
+        Assert.Equal(570, vm.FilteredGames[0].AppId);
+        Assert.False(vm.FilteredGames[0].IsInstalled);
+    }
+
+    [Fact]
     public void LuaTileViewModel_IsOriginal_DefaultsToFalseAndCanBeSet()
     {
         var tile = new LuaTileViewModel(1091500, @"C:\Games\Cyberpunk\1091500.lua", System.DateTime.UtcNow, "Cyberpunk 2077", false);
@@ -209,6 +244,72 @@ public class SteamLibraryViewModelTests
         vm.NavigateBuildsCommand.Execute(item);
         Assert.Equal(1245620, buildsAppId);
     }
+
+    [Fact]
+    public void SteamLibraryService_EnumerateOwnedGames_DetectsOwnedGames()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), "SteamOwnedTest_" + System.Guid.NewGuid());
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            // Create config/loginusers.vdf
+            string configDir = Path.Combine(tempDir, "config");
+            Directory.CreateDirectory(configDir);
+            File.WriteAllText(Path.Combine(configDir, "loginusers.vdf"), 
+                "\"users\" { \"76561198875534981\" { \"AccountName\" \"user1\" \"mostrecent\" \"1\" } }");
+
+            // Account ID: 915269253
+            string libCacheDir = Path.Combine(tempDir, "userdata", "915269253", "config", "librarycache");
+            Directory.CreateDirectory(libCacheDir);
+            File.WriteAllText(Path.Combine(libCacheDir, "1085660.json"), "{}");
+            File.WriteAllText(Path.Combine(libCacheDir, "1245620.json"), "{}");
+
+            // Localconfig.vdf
+            string localConfig = Path.Combine(tempDir, "userdata", "915269253", "config", "localconfig.vdf");
+            File.WriteAllText(localConfig, "\"UserLocalConfigStore\" { \"Software\" { \"Valve\" { \"Steam\" { \"apps\" { \"570\" { \"playtime\" \"100\" } } } } } }");
+
+            var settings = new SettingsService();
+            settings.SteamPathOverride = tempDir;
+            var steam = new SteamService(settings);
+            var service = new SteamLibraryService(steam);
+
+            uint? accId = service.GetActiveAccountId();
+            Assert.Equal(915269253u, accId);
+
+            var ownedAppIds = service.EnumerateOwnedAppIds();
+            Assert.Contains(1085660, ownedAppIds);
+            Assert.Contains(1245620, ownedAppIds);
+            Assert.Contains(570, ownedAppIds);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, true);
+            }
+        }
+    }
+
+    [Fact]
+    public void SteamLibraryItemVm_StatusBadge_ReflectsInstalledAndDlcStatus()
+    {
+        var itemInstalledVanilla = new SteamLibraryItemVm(1245620, "Elden Ring", @"C:\Games\Elden Ring", "", isInstalled: true) { IsDlcInjected = false };
+        Assert.True(itemInstalledVanilla.IsInstalled);
+        Assert.Equal("Original", itemInstalledVanilla.StatusBadge);
+        Assert.Equal("#10b981", itemInstalledVanilla.StatusBadgeBackground);
+
+        var itemInstalledInjected = new SteamLibraryItemVm(1091500, "Cyberpunk 2077", @"C:\Games\Cyberpunk", "", isInstalled: true) { IsDlcInjected = true };
+        Assert.True(itemInstalledInjected.IsInstalled);
+        Assert.Equal("DLCs Injected", itemInstalledInjected.StatusBadge);
+        Assert.Equal("#8b5cf6", itemInstalledInjected.StatusBadgeBackground);
+
+        var itemNotInstalled = new SteamLibraryItemVm(570, "Dota 2", "", "", isInstalled: false);
+        Assert.False(itemNotInstalled.IsInstalled);
+        Assert.Equal("Not Installed", itemNotInstalled.StatusBadge);
+        Assert.Equal("#475569", itemNotInstalled.StatusBadgeBackground);
+    }
 }
+
 
 

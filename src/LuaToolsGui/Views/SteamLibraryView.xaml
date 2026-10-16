@@ -27,7 +27,7 @@
             </Grid.ColumnDefinitions>
             <StackPanel>
                 <TextBlock FontSize="22" FontWeight="Bold" Text="Steam Library" />
-                <TextBlock Margin="0,4,0,0" FontSize="13" Foreground="#9ca3af" Text="Official Steam games installed on this PC. Manage DLCs, mods, achievements, and storage." />
+                <TextBlock Margin="0,4,0,0" FontSize="13" Foreground="#9ca3af" Text="Original games owned by your Steam account. Manage DLCs, achievements, mods, and storage." />
             </StackPanel>
             <ui:Button
                 Grid.Column="1"
@@ -46,7 +46,7 @@
             
             <ui:TextBox
                 Icon="{ui:SymbolIcon Search24}"
-                PlaceholderText="Search installed games by title or AppID..."
+                PlaceholderText="Search owned games by title or AppID..."
                 Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
 
             <!-- Filter Pills -->
@@ -73,9 +73,67 @@
                         </Style>
                     </Button.Style>
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="All Installed" FontWeight="SemiBold" FontSize="12.5" />
+                        <TextBlock Text="All Owned" FontWeight="SemiBold" FontSize="12.5" />
                         <Border Margin="6,0,0,0" Padding="5,1" Background="#22000000" CornerRadius="10">
                             <TextBlock Text="{Binding TotalGamesCount}" FontSize="11" FontWeight="Bold" />
+                        </Border>
+                    </StackPanel>
+                </Button>
+
+                <Button
+                    Margin="0,0,6,0"
+                    Padding="12,6"
+                    BorderThickness="1"
+                    Cursor="Hand"
+                    Command="{Binding SetFilterCommand}"
+                    CommandParameter="Installed">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Background" Value="#14ffffff" />
+                            <Setter Property="BorderBrush" Value="#22ffffff" />
+                            <Setter Property="Foreground" Value="#d1d5db" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsFilterInstalled}" Value="True">
+                                    <Setter Property="Background" Value="#10b981" />
+                                    <Setter Property="BorderBrush" Value="#34d399" />
+                                    <Setter Property="Foreground" Value="White" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Installed" FontWeight="SemiBold" FontSize="12.5" />
+                        <Border Margin="6,0,0,0" Padding="5,1" Background="#22000000" CornerRadius="10">
+                            <TextBlock Text="{Binding InstalledCount}" FontSize="11" FontWeight="Bold" />
+                        </Border>
+                    </StackPanel>
+                </Button>
+
+                <Button
+                    Margin="0,0,6,0"
+                    Padding="12,6"
+                    BorderThickness="1"
+                    Cursor="Hand"
+                    Command="{Binding SetFilterCommand}"
+                    CommandParameter="NotInstalled">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Background" Value="#14ffffff" />
+                            <Setter Property="BorderBrush" Value="#22ffffff" />
+                            <Setter Property="Foreground" Value="#d1d5db" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsFilterNotInstalled}" Value="True">
+                                    <Setter Property="Background" Value="#475569" />
+                                    <Setter Property="BorderBrush" Value="#64748b" />
+                                    <Setter Property="Foreground" Value="White" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Not Installed" FontWeight="SemiBold" FontSize="12.5" />
+                        <Border Margin="6,0,0,0" Padding="5,1" Background="#22000000" CornerRadius="10">
+                            <TextBlock Text="{Binding NotInstalledCount}" FontSize="11" FontWeight="Bold" />
                         </Border>
                     </StackPanel>
                 </Button>
@@ -130,7 +188,7 @@
                         </Style>
                     </Button.Style>
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="Vanilla" FontWeight="SemiBold" FontSize="12.5" />
+                        <TextBlock Text="Original" FontWeight="SemiBold" FontSize="12.5" />
                         <Border Margin="6,0,0,0" Padding="5,1" Background="#22000000" CornerRadius="10">
                             <TextBlock Text="{Binding VanillaCount}" FontSize="11" FontWeight="Bold" />
                         </Border>
@@ -255,7 +313,7 @@
                 VerticalAlignment="Center"
                 FontSize="13"
                 Foreground="#9ca3af"
-                Text="Scanning installed Steam games..." />
+                Text="Scanning owned Steam games..." />
         </StackPanel>
 
         <!-- Empty State -->
@@ -288,7 +346,7 @@
                 HorizontalAlignment="Center"
                 FontSize="13"
                 Foreground="#9ca3af"
-                Text="No installed Steam games found matching your filter."
+                Text="No Steam games found matching your filter."
                 TextAlignment="Center" />
         </StackPanel>
 
@@ -388,7 +446,14 @@
                             Foreground="#6b7280"
                             Text="{Binding InstallDir}"
                             TextTrimming="CharacterEllipsis"
-                            ToolTip="{Binding InstallDir}" />
+                            ToolTip="{Binding InstallDir}"
+                            Visibility="{Binding IsInstalled, Converter={StaticResource BoolToVis}}" />
+                        <TextBlock
+                            Margin="0,4,0,0"
+                            FontSize="11.5"
+                            Foreground="#94a3b8"
+                            Text="Not installed on local disk"
+                            Visibility="{Binding IsInstalled, Converter={StaticResource InverseBoolToVis}}" />
                     </StackPanel>
 
                     <!-- Scrollable Action List -->
@@ -397,9 +462,28 @@
                         Margin="0,14,0,0"
                         VerticalScrollBarVisibility="Auto">
                         <StackPanel Margin="0,0,6,16">
+                            <!-- Play or Install Action -->
+                            <ui:Button
+                                HorizontalAlignment="Stretch"
+                                Appearance="Success"
+                                Command="{Binding DataContext.PlayGameCommand, ElementName=Root}"
+                                CommandParameter="{Binding}"
+                                Content="Play Game"
+                                Icon="{ui:SymbolIcon Play24}"
+                                Visibility="{Binding IsInstalled, Converter={StaticResource BoolToVis}}" />
+
+                            <ui:Button
+                                HorizontalAlignment="Stretch"
+                                Appearance="Primary"
+                                Command="{Binding DataContext.InstallGameCommand, ElementName=Root}"
+                                CommandParameter="{Binding}"
+                                Content="Install via Steam"
+                                Icon="{ui:SymbolIcon ArrowDownload24}"
+                                Visibility="{Binding IsInstalled, Converter={StaticResource InverseBoolToVis}}" />
+
                             <!-- DLC Actions -->
                             <TextBlock
-                                Margin="0,0,0,8"
+                                Margin="0,14,0,8"
                                 FontSize="13"
                                 FontWeight="SemiBold"
                                 Foreground="#d1d5db"
@@ -468,7 +552,8 @@
                                 Command="{Binding DataContext.ManageModsCommand, ElementName=Root}"
                                 CommandParameter="{Binding}"
                                 Content="Manage Mods"
-                                Icon="{ui:SymbolIcon Settings24}" />
+                                Icon="{ui:SymbolIcon Settings24}"
+                                IsEnabled="{Binding IsInstalled}" />
 
                             <ui:Button
                                 Margin="0,8,0,0"
@@ -476,7 +561,8 @@
                                 Command="{Binding DataContext.MoveStorageCommand, ElementName=Root}"
                                 CommandParameter="{Binding}"
                                 Content="Move Storage (Symlink)"
-                                Icon="{ui:SymbolIcon FolderArrowRight24}" />
+                                Icon="{ui:SymbolIcon FolderArrowRight24}"
+                                IsEnabled="{Binding IsInstalled}" />
 
                             <ui:Button
                                 Margin="0,8,0,0"
@@ -485,7 +571,8 @@
                                 CommandParameter="{Binding}"
                                 Content="Clean Leftover Files"
                                 Foreground="#f87171"
-                                Icon="{ui:SymbolIcon Delete24}" />
+                                Icon="{ui:SymbolIcon Delete24}"
+                                IsEnabled="{Binding IsInstalled}" />
 
                             <ui:Button
                                 Margin="0,8,0,0"
@@ -493,7 +580,8 @@
                                 Command="{Binding DataContext.RemoveDrmCommand, ElementName=Root}"
                                 CommandParameter="{Binding}"
                                 Content="Remove DRM (Steamless)"
-                                Icon="{ui:SymbolIcon WrenchScrewdriver24}" />
+                                Icon="{ui:SymbolIcon WrenchScrewdriver24}"
+                                IsEnabled="{Binding IsInstalled}" />
 
                             <!-- Quick Links -->
                             <TextBlock
@@ -524,7 +612,8 @@
                                     Command="{Binding DataContext.RevealFolderCommand, ElementName=Root}"
                                     CommandParameter="{Binding}"
                                     Content="Reveal Folder"
-                                    Icon="{ui:SymbolIcon FolderOpen24}" />
+                                    Icon="{ui:SymbolIcon FolderOpen24}"
+                                    IsEnabled="{Binding IsInstalled}" />
                                 <ui:Button
                                     Margin="4,4,0,0"
                                     HorizontalAlignment="Stretch"

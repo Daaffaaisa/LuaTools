@@ -18,6 +18,8 @@ namespace LuaToolsGui.ViewModels;
 public enum SteamLibraryFilter
 {
     All,
+    Installed,
+    NotInstalled,
     Injected,
     Vanilla
 }
@@ -58,12 +60,20 @@ public partial class SteamLibraryViewModel : ObservableObject
     private int _totalGamesCount;
 
     [ObservableProperty]
+    private int _installedCount;
+
+    [ObservableProperty]
+    private int _notInstalledCount;
+
+    [ObservableProperty]
     private int _injectedCount;
 
     [ObservableProperty]
     private int _vanillaCount;
 
     public bool IsFilterAll => CurrentFilter == SteamLibraryFilter.All;
+    public bool IsFilterInstalled => CurrentFilter == SteamLibraryFilter.Installed;
+    public bool IsFilterNotInstalled => CurrentFilter == SteamLibraryFilter.NotInstalled;
     public bool IsFilterInjected => CurrentFilter == SteamLibraryFilter.Injected;
     public bool IsFilterVanilla => CurrentFilter == SteamLibraryFilter.Vanilla;
 
@@ -112,6 +122,8 @@ public partial class SteamLibraryViewModel : ObservableObject
     partial void OnCurrentFilterChanged(SteamLibraryFilter value)
     {
         OnPropertyChanged(nameof(IsFilterAll));
+        OnPropertyChanged(nameof(IsFilterInstalled));
+        OnPropertyChanged(nameof(IsFilterNotInstalled));
         OnPropertyChanged(nameof(IsFilterInjected));
         OnPropertyChanged(nameof(IsFilterVanilla));
         ApplyFilter();
@@ -122,6 +134,8 @@ public partial class SteamLibraryViewModel : ObservableObject
     {
         CurrentFilter = filterName switch
         {
+            "Installed" => SteamLibraryFilter.Installed,
+            "NotInstalled" => SteamLibraryFilter.NotInstalled,
             "Injected" => SteamLibraryFilter.Injected,
             "Vanilla" => SteamLibraryFilter.Vanilla,
             _ => SteamLibraryFilter.All
@@ -133,7 +147,11 @@ public partial class SteamLibraryViewModel : ObservableObject
         string q = SearchText.Trim();
         var query = _allGames.AsEnumerable();
 
-        if (CurrentFilter == SteamLibraryFilter.Injected)
+        if (CurrentFilter == SteamLibraryFilter.Installed)
+            query = query.Where(g => g.IsInstalled);
+        else if (CurrentFilter == SteamLibraryFilter.NotInstalled)
+            query = query.Where(g => !g.IsInstalled);
+        else if (CurrentFilter == SteamLibraryFilter.Injected)
             query = query.Where(g => g.IsDlcInjected);
         else if (CurrentFilter == SteamLibraryFilter.Vanilla)
             query = query.Where(g => g.IsVanilla);
@@ -151,6 +169,8 @@ public partial class SteamLibraryViewModel : ObservableObject
     private void UpdateCounts()
     {
         TotalGamesCount = _allGames.Count;
+        InstalledCount = _allGames.Count(g => g.IsInstalled);
+        NotInstalledCount = _allGames.Count(g => !g.IsInstalled);
         InjectedCount = _allGames.Count(g => g.IsDlcInjected);
         VanillaCount = _allGames.Count(g => g.IsVanilla);
     }
@@ -173,10 +193,10 @@ public partial class SteamLibraryViewModel : ObservableObject
             var games = await Task.Run(() =>
             {
                 var list = new List<SteamLibraryItemVm>();
-                foreach (var installed in _library.EnumerateInstalled())
+                foreach (var owned in _library.EnumerateOwnedGames())
                 {
-                    string name = installed.Name;
-                    if (_appList != null && (_appList.GetName(installed.AppId) is { } realName))
+                    string name = owned.Name;
+                    if (_appList != null && (_appList.GetName(owned.AppId) is { } realName))
                     {
                         name = realName;
                     }
@@ -184,17 +204,17 @@ public partial class SteamLibraryViewModel : ObservableObject
                     long size = 0;
                     try
                     {
-                        if (Directory.Exists(installed.InstallDir))
+                        if (owned.IsInstalled && !string.IsNullOrEmpty(owned.InstallDir) && Directory.Exists(owned.InstallDir))
                         {
-                            var di = new DirectoryInfo(installed.InstallDir);
+                            var di = new DirectoryInfo(owned.InstallDir);
                             size = di.EnumerateFiles("*", SearchOption.TopDirectoryOnly).Sum(f => f.Length);
                         }
                     }
                     catch { }
 
-                    var item = new SteamLibraryItemVm(installed.AppId, name, installed.InstallDir, stPlugIn, size)
+                    var item = new SteamLibraryItemVm(owned.AppId, name, owned.InstallDir ?? "", stPlugIn, size, owned.IsInstalled)
                     {
-                        FormattedSize = size > 0 ? FormatSize(size) : ""
+                        FormattedSize = owned.IsInstalled ? (size > 0 ? FormatSize(size) : "") : "Not Installed"
                     };
                     list.Add(item);
                 }
@@ -211,6 +231,20 @@ public partial class SteamLibraryViewModel : ObservableObject
         {
             IsLoading = false;
         }
+    }
+
+    [RelayCommand]
+    private static void InstallGame(SteamLibraryItemVm? item)
+    {
+        if (item == null) return;
+        SteamService.OpenUrl($"steam://install/{item.AppId}");
+    }
+
+    [RelayCommand]
+    private static void PlayGame(SteamLibraryItemVm? item)
+    {
+        if (item == null) return;
+        SteamService.OpenUrl($"steam://run/{item.AppId}");
     }
 
     private void StartCoverPrefetch()
