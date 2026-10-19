@@ -228,6 +228,8 @@
                         BorderThickness="1"
                         CornerRadius="10"
                         Cursor="Hand"
+                        DataContextChanged="Tile_DataContextChanged"
+                        Loaded="Tile_Loaded"
                         MouseLeftButtonUp="Tile_Click">
                         <Border.Style>
                             <Style TargetType="Border">

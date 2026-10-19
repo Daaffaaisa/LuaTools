@@ -23,6 +23,16 @@ public partial class SteamLibraryView : UserControl
         };
     }
 
+    private void Tile_DataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (e.NewValue is SteamLibraryItemVm tile) _viewModel.ResolveTile(tile);
+    }
+
+    private void Tile_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: SteamLibraryItemVm tile }) _viewModel.ResolveTile(tile);
+    }
+
     private void Tile_Click(object sender, MouseButtonEventArgs e)
     {
         if (sender is FrameworkElement { DataContext: SteamLibraryItemVm game })

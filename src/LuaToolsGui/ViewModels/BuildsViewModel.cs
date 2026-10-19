@@ -338,15 +338,22 @@ public partial class BuildsViewModel : PagedListViewModel<LuaTileViewModel>
                 var installed = LuaInstaller.EnumerateInstalled(dir).ToDictionary(f => f.AppId, f => f.Path);
                 var appIds = new HashSet<long>(installed.Keys);
                 foreach (var (appId, _, _) in _vault.EnumerateLooseBuildLuas()) appIds.Add(appId);
+                if (ActiveGame is { } prevActive && !appIds.Contains(prevActive.AppId))
+                {
+                    appIds.Add(prevActive.AppId);
+                }
 
                 return appIds
                     .Select(appId =>
                     {
                         string path = installed.TryGetValue(appId, out var p) ? p : Path.Combine(dir, $"{appId}.lua");
-                        string? name = _appList.GetName(appId) ?? _appInfo.GetCached(appId)?.Name;
+                        string? name = (ActiveGame?.AppId == appId ? ActiveGame.Name : null) ?? _appList.GetName(appId) ?? _appInfo.GetCached(appId)?.Name;
                         var added = File.Exists(path) ? File.GetLastWriteTime(path) : DateTime.MinValue;
                         return new LuaTileViewModel(appId, path, added,
-                            name ?? string.Format(Resources.Strings.Common_AppFallback, appId), name is null);
+                            name ?? string.Format(Resources.Strings.Common_AppFallback, appId), name is null)
+                        {
+                            IsOriginal = ActiveGame?.AppId == appId && ActiveGame.IsOriginal
+                        };
                     })
                     .OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase)
                     .ToList();
@@ -417,9 +424,17 @@ public partial class BuildsViewModel : PagedListViewModel<LuaTileViewModel>
         }
         if (game is null)
         {
-            _toast.Show(Resources.Strings.Manage_Toast_NotFound_Title,
-                Resources.Strings.Manage_Toast_NotFound_Body, error: true);
-            return;
+            string? dir = _steam.StPlugInDir;
+            string path = dir is not null ? Path.Combine(dir, $"{appId}.lua") : "";
+            string? name = _appList.GetName(appId) ?? _appInfo.GetCached(appId)?.Name;
+            game = new LuaTileViewModel(appId, path, DateTime.MinValue,
+                name ?? string.Format(Resources.Strings.Common_AppFallback, appId), name is null)
+            {
+                IsOriginal = true
+            };
+            _allGames.Add(game);
+            _allGames = _allGames.OrderBy(t => t.Name, StringComparer.OrdinalIgnoreCase).ToList();
+            ApplyGameFilter();
         }
 
         // Clear any search so the game is definitely in the filtered set…
@@ -1329,10 +1344,22 @@ public partial class BuildsViewModel : PagedListViewModel<LuaTileViewModel>
 
         var target = SelectedVariant?.Variant;
 
-        string before = editingLive || target is null
+        bool writeToLive = editingLive || target is null || (game.IsOriginal && string.IsNullOrEmpty(_vault.ReadLiveText(game.AppId)));
+
+        string before = writeToLive
             ? _vault.ReadLiveText(game.AppId)
-            : _vault.ReadText(game.AppId, target.Hash);
-        if (string.IsNullOrEmpty(before)) return;
+            : _vault.ReadText(game.AppId, target!.Hash);
+        if (string.IsNullOrEmpty(before))
+        {
+            if (game.IsOriginal)
+            {
+                before = $"addappid({game.AppId}) -- {game.Name} (Official Base Game)\n";
+            }
+            else
+            {
+                return;
+            }
+        }
 
         string after = edit(before);
         if (after == before) return; // already in that state. Don't churn the file or the UI
@@ -1345,14 +1372,14 @@ public partial class BuildsViewModel : PagedListViewModel<LuaTileViewModel>
         _suppressDepotReload = true;
         try
         {
-            if (editingLive || target is null)
+            if (writeToLive)
             {
                 RememberEditBase(game.AppId);
                 ok = _vault.WriteLive(game.AppId, after);
             }
             else
             {
-                var updated = _vault.UpdateVariant(game.AppId, target.Hash, after);
+                var updated = _vault.UpdateVariant(game.AppId, target!.Hash, after);
                 ok = updated is not null;
                 newHash = updated?.Hash; // content-addressed: editing renames the stored file
             }

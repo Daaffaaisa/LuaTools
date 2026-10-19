@@ -366,14 +366,7 @@ public partial class SteamLibraryService(SteamService steam)
                 try
                 {
                     string text = File.ReadAllText(localConfig);
-                    var matches = Regex.Matches(text, @"""(\d+)""\s*\{");
-                    foreach (Match m in matches)
-                    {
-                        if (long.TryParse(m.Groups[1].Value, out long id) && id > 10)
-                        {
-                            rawCandidates.Add(id);
-                        }
-                    }
+                    ExtractAppsFromVdf(text, rawCandidates);
                 }
                 catch { }
             }
@@ -432,6 +425,62 @@ public partial class SteamLibraryService(SteamService steam)
             else
             {
                 yield return new OwnedGame(appId, appId.ToString(), false, null);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Extracts AppIDs specifically located inside "apps" { ... } blocks within VDF content.
+    /// Prevents non-app blocks (such as "friends", "News", "broadcast") from being treated as games.
+    /// </summary>
+    internal static void ExtractAppsFromVdf(string text, HashSet<long> target)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return;
+
+        var matches = Regex.Matches(text, @"""([^""\\]*(?:\\.[^""\\]*)*)""|([{}])");
+        bool inApps = false;
+        int depthInApps = 0;
+
+        for (int i = 0; i < matches.Count; i++)
+        {
+            var m = matches[i];
+            if (m.Groups[2].Success)
+            {
+                string brace = m.Groups[2].Value;
+                if (brace == "{")
+                {
+                    if (inApps) depthInApps++;
+                }
+                else if (brace == "}")
+                {
+                    if (inApps)
+                    {
+                        depthInApps--;
+                        if (depthInApps <= 0)
+                        {
+                            inApps = false;
+                        }
+                    }
+                }
+            }
+            else if (m.Groups[1].Success)
+            {
+                string val = m.Groups[1].Value;
+                if (!inApps)
+                {
+                    if (val.Equals("apps", StringComparison.OrdinalIgnoreCase))
+                    {
+                        inApps = true;
+                        depthInApps = 0;
+                    }
+                }
+                else if (depthInApps == 1)
+                {
+                    if (long.TryParse(val, out long appId) && appId > 0)
+                    {
+                        target.Add(appId);
+                    }
+                }
             }
         }
     }

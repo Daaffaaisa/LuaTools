@@ -11,11 +11,14 @@ namespace LuaToolsGui.ViewModels;
 public partial class SteamLibraryItemVm : ObservableObject
 {
     public long AppId { get; }
-    public string Name { get; }
+    [ObservableProperty] private string _name = "";
     public string InstallDir { get; }
     public string StPlugInDir { get; }
 
     public string LuaPath => Path.Combine(StPlugInDir, $"{AppId}.lua");
+
+    private int _resolving;
+    private bool _nameIsPlaceholder;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsVanilla))]
@@ -43,13 +46,66 @@ public partial class SteamLibraryItemVm : ObservableObject
     public SteamLibraryItemVm(long appId, string name, string installDir, string stPlugInDir, long sizeOnDisk = 0, bool isInstalled = true)
     {
         AppId = appId;
-        Name = name;
+        _name = name;
+        _nameIsPlaceholder = string.IsNullOrWhiteSpace(name) || name == appId.ToString();
         InstallDir = installDir;
         StPlugInDir = stPlugInDir;
         SizeOnDisk = sizeOnDisk;
         IsInstalled = isInstalled;
         
         RefreshStatus();
+    }
+
+    public void SetName(string newName)
+    {
+        _nameIsPlaceholder = false;
+        var dispatcher = System.Windows.Application.Current?.Dispatcher;
+        if (dispatcher is null || dispatcher.CheckAccess()) Name = newName;
+        else dispatcher.Invoke(() => Name = newName);
+    }
+
+    public async Task EnsureResolvedAsync(SteamAppInfoCache? appInfo, CoverCache? covers, SteamAppListCache? appList)
+    {
+        if (Cover is not null && !_nameIsPlaceholder) return;
+        if (System.Threading.Interlocked.Exchange(ref _resolving, 1) == 1) return;
+        try
+        {
+            // 1. If name is placeholder, try fast lookup from appList or appInfo
+            if (_nameIsPlaceholder)
+            {
+                string? fastName = appList?.GetName(AppId) ?? appInfo?.GetCached(AppId)?.Name;
+                if (!string.IsNullOrWhiteSpace(fastName))
+                {
+                    SetName(fastName);
+                }
+            }
+
+            if (appInfo == null || covers == null) return;
+
+            // 2. Resolve cover file (and backfill name if still placeholder)
+            string? local = await LuaTileViewModel.ResolveCoverFileAsync(AppId, appInfo, covers,
+                name => { if (_nameIsPlaceholder) SetName(name); });
+
+            if (_nameIsPlaceholder)
+            {
+                var info = appInfo.GetCached(AppId) ?? await appInfo.ResolveAsync(AppId);
+                if (!string.IsNullOrWhiteSpace(info?.Name)) SetName(info!.Name);
+            }
+
+            if (local is null) return;
+            var image = await System.Threading.Tasks.Task.Run(() => LuaTileViewModel.LoadFrozen(local));
+            if (image is not null)
+            {
+                var dispatcher = System.Windows.Application.Current?.Dispatcher;
+                if (dispatcher is null || dispatcher.CheckAccess()) Cover = image;
+                else dispatcher.Invoke(() => Cover = image);
+            }
+        }
+        catch { }
+        finally
+        {
+            System.Threading.Interlocked.Exchange(ref _resolving, 0);
+        }
     }
 
     [RelayCommand]

@@ -3,6 +3,8 @@ using System.IO;
 using System.Linq;
 using LuaToolsGui.Services;
 using LuaToolsGui.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Xunit;
 
 namespace LuaToolsGui.Tests;
@@ -289,6 +291,55 @@ public class SteamLibraryViewModelTests
             {
                 Directory.Delete(tempDir, true);
             }
+        }
+    }
+
+    [Fact]
+    public void SteamLibraryService_EnumerateOwnedGames_IgnoresNonAppSectionsInLocalConfig()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), "SteamIgnoreFriendsTest_" + System.Guid.NewGuid());
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            string configDir = Path.Combine(tempDir, "config");
+            Directory.CreateDirectory(configDir);
+            File.WriteAllText(Path.Combine(configDir, "loginusers.vdf"), 
+                "\"users\" { \"76561198875534981\" { \"AccountName\" \"user1\" \"mostrecent\" \"1\" } }");
+
+            string userDir = Path.Combine(tempDir, "userdata", "915269253", "config");
+            Directory.CreateDirectory(userDir);
+
+            string localConfig = Path.Combine(userDir, "localconfig.vdf");
+            File.WriteAllText(localConfig, 
+                "\"UserLocalConfigStore\" {\n" +
+                "  \"friends\" {\n" +
+                "    \"999888777\" { \"name\" \"FriendPerson\" }\n" +
+                "  }\n" +
+                "  \"News\" {\n" +
+                "    \"Messages\" {\n" +
+                "      \"888777666\" { \"time\" \"12345\" }\n" +
+                "    }\n" +
+                "  }\n" +
+                "  \"Software\" { \"Valve\" { \"Steam\" { \"apps\" {\n" +
+                "    \"570\" { \"playtime\" \"100\" }\n" +
+                "  } } } }\n" +
+                "}");
+
+            string tempSettings = Path.Combine(tempDir, "settings.json");
+            var settings = new SettingsService(tempSettings);
+            settings.SteamPathOverride = tempDir;
+            var steam = new SteamService(settings);
+            var service = new SteamLibraryService(steam);
+
+            var ownedAppIds = service.EnumerateOwnedAppIds();
+            Assert.Contains(570, ownedAppIds);
+            Assert.DoesNotContain(999888777, ownedAppIds);
+            Assert.DoesNotContain(888777666, ownedAppIds);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
         }
     }
 
@@ -581,6 +632,140 @@ public class SteamLibraryViewModelTests
             Assert.False(dota.IsInstalled);
             Assert.False(dota.IsDlcInjected);
             Assert.Equal("Not Installed", dota.StatusBadge);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void SteamLibraryItemVm_SetName_UpdatesNameAndNotifiesPropertyChanged()
+    {
+        var item = new SteamLibraryItemVm(570, "570", "", "", 0, isInstalled: false);
+        Assert.Equal("570", item.Name);
+
+        bool nameChanged = false;
+        item.PropertyChanged += (s, e) =>
+        {
+            if (e.PropertyName == nameof(item.Name)) nameChanged = true;
+        };
+
+        item.SetName("Dota 2");
+        Assert.Equal("Dota 2", item.Name);
+        Assert.True(nameChanged);
+    }
+
+    [Fact]
+    public async System.Threading.Tasks.Task BuildsViewModel_SelectAppAsync_AdmitsOriginalGameWhenNotInStPlugIn()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), "BuildsSelectTest_" + System.Guid.NewGuid());
+        Directory.CreateDirectory(tempDir);
+        string tempSettings = Path.Combine(tempDir, "settings.json");
+
+        try
+        {
+            var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
+            services.AddSingleton(new SettingsService(tempSettings));
+            services.AddSingleton<SteamService>();
+            services.AddSingleton<SteamAppListCache>();
+            services.AddSingleton<CacheService>();
+            services.AddLogging();
+            services.AddSingleton<SteamAppInfoCache>();
+            services.AddSingleton<CoverCache>();
+            services.AddSingleton<SteamDepotInfo>();
+            services.AddSingleton<ToastService>();
+            services.AddSingleton(sp => new LuaVault(() => sp.GetRequiredService<SteamService>().StPlugInDir, Path.Combine(tempDir, "vault")));
+            services.AddSingleton<GithubProxy>();
+            services.AddSingleton<LuaToolsApiClient>();
+            services.AddSingleton<HubcapService>();
+            services.AddSingleton<AuthService>();
+            services.AddSingleton<DepotDownloaderService>();
+            services.AddSingleton<SteamLibraryService>();
+            services.AddSingleton<LuaInstaller>();
+            services.AddSingleton<SteamAutoCrackService>();
+            services.AddSingleton<AppliedFixIndexService>();
+            services.AddSingleton<Services.Downloads.DownloadQueue>();
+            services.AddSingleton<Services.Downloads.ManifestJobFactory>();
+            services.AddSingleton<BuildsViewModel>();
+
+            var sp = services.BuildServiceProvider();
+            var vm = sp.GetRequiredService<BuildsViewModel>();
+
+            // AppID 570 (Dota 2) does not exist in stplug-in
+            await vm.SelectAppAsync(570);
+
+            Assert.NotNull(vm.ActiveGame);
+            Assert.Equal(570, vm.ActiveGame.AppId);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public async System.Threading.Tasks.Task BuildsViewModel_EditLive_GeneratesBaseLuaForOriginalGameWhenAddingDlc()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), "BuildsAddDlcTest_" + System.Guid.NewGuid());
+        Directory.CreateDirectory(tempDir);
+        string tempSettings = Path.Combine(tempDir, "settings.json");
+
+        try
+        {
+            string stPlugIn = Path.Combine(tempDir, "config", "stplug-in");
+            Directory.CreateDirectory(stPlugIn);
+
+            var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
+            var settings = new SettingsService(tempSettings);
+            settings.SteamPathOverride = tempDir;
+            services.AddSingleton(settings);
+            services.AddSingleton<SteamService>();
+            services.AddSingleton<SteamAppListCache>();
+            services.AddSingleton<CacheService>();
+            services.AddLogging();
+            services.AddSingleton<SteamAppInfoCache>();
+            services.AddSingleton<CoverCache>();
+            services.AddSingleton<SteamDepotInfo>();
+            services.AddSingleton<ToastService>();
+            services.AddSingleton(sp => new LuaVault(() => sp.GetRequiredService<SteamService>().StPlugInDir, Path.Combine(tempDir, "vault")));
+            services.AddSingleton<GithubProxy>();
+            services.AddSingleton<LuaToolsApiClient>();
+            services.AddSingleton<HubcapService>();
+            services.AddSingleton<AuthService>();
+            services.AddSingleton<DepotDownloaderService>();
+            services.AddSingleton<SteamLibraryService>();
+            services.AddSingleton<LuaInstaller>();
+            services.AddSingleton<SteamAutoCrackService>();
+            services.AddSingleton<AppliedFixIndexService>();
+            services.AddSingleton<Services.Downloads.DownloadQueue>();
+            services.AddSingleton<Services.Downloads.ManifestJobFactory>();
+            services.AddSingleton<BuildsViewModel>();
+
+            var sp = services.BuildServiceProvider();
+            var vm = sp.GetRequiredService<BuildsViewModel>();
+
+            await vm.SelectAppAsync(570);
+            Assert.NotNull(vm.ActiveGame);
+            Assert.True(vm.ActiveGame.IsOriginal);
+
+            var steamService = sp.GetRequiredService<SteamService>();
+            Assert.Equal(stPlugIn, steamService.StPlugInDir);
+
+            string expectedLua = Path.Combine(stPlugIn, "570.lua");
+            var vault = sp.GetRequiredService<LuaVault>();
+            string? livePath = vault.LivePath(570);
+            Assert.Equal(expectedLua, livePath);
+
+            var dlcRow = new DepotRow(571, "Test DLC", "", true, false, "", null, null, null) { ToggleId = 571 };
+            bool canExec = vm.AddDlcCommand.CanExecute(dlcRow);
+            Assert.True(canExec);
+
+            vm.AddDlcCommand.Execute(dlcRow);
+            Assert.True(File.Exists(expectedLua));
+            string luaText = File.ReadAllText(expectedLua);
+            Assert.Contains("addappid(570)", luaText);
+            Assert.Contains("addappid(571)", luaText);
         }
         finally
         {

@@ -90,12 +90,13 @@ public partial class SteamLibraryViewModel : ObservableObject
     {
     }
 
-    public SteamLibraryViewModel(SteamLibraryService library, SteamService steam)
+    internal SteamLibraryViewModel(SteamLibraryService library, SteamService steam)
     {
         _library = library;
         _steam = steam;
     }
 
+    [Microsoft.Extensions.DependencyInjection.ActivatorUtilitiesConstructor]
     public SteamLibraryViewModel(
         SteamLibraryService library,
         SteamService steam,
@@ -194,7 +195,7 @@ public partial class SteamLibraryViewModel : ObservableObject
                 await _appList.EnsureLoadedAsync();
             }
 
-            string stPlugIn = _steam.StPlugInDir;
+            string stPlugIn = _steam.StPlugInDir ?? "";
 
             var games = await Task.Run(() =>
             {
@@ -202,7 +203,8 @@ public partial class SteamLibraryViewModel : ObservableObject
                 foreach (var owned in _library.EnumerateOwnedGames())
                 {
                     string name = owned.Name;
-                    if (_appList != null && (_appList.GetName(owned.AppId) is { } realName))
+                    string? realName = _appList?.GetName(owned.AppId) ?? _appInfo?.GetCached(owned.AppId)?.Name;
+                    if (!string.IsNullOrWhiteSpace(realName))
                     {
                         name = realName;
                     }
@@ -253,6 +255,8 @@ public partial class SteamLibraryViewModel : ObservableObject
         SteamService.OpenUrl($"steam://run/{item.AppId}");
     }
 
+    public void ResolveTile(SteamLibraryItemVm tile) => _ = tile.EnsureResolvedAsync(_appInfo, _covers, _appList);
+
     private void StartCoverPrefetch()
     {
         if (_covers == null || _appInfo == null) return;
@@ -263,24 +267,21 @@ public partial class SteamLibraryViewModel : ObservableObject
 
         _ = Task.Run(async () =>
         {
-            foreach (var game in _allGames)
+            var options = new ParallelOptions
             {
-                if (ct.IsCancellationRequested) break;
-                try
+                MaxDegreeOfParallelism = 4,
+                CancellationToken = ct
+            };
+
+            try
+            {
+                await Parallel.ForEachAsync(_allGames, options, async (game, token) =>
                 {
-                    string? path = await LuaTileViewModel.ResolveCoverFileAsync(game.AppId, _appInfo, _covers);
-                    if (!string.IsNullOrEmpty(path))
-                    {
-                        var img = await Task.Run(() => LuaTileViewModel.LoadFrozen(path));
-                        Application.Current?.Dispatcher?.Invoke(() =>
-                        {
-                            game.CoverPath = path;
-                            if (img != null) game.Cover = img;
-                        });
-                    }
-                }
-                catch { }
+                    if (token.IsCancellationRequested) return;
+                    await game.EnsureResolvedAsync(_appInfo, _covers, _appList);
+                });
             }
+            catch { }
         }, ct);
     }
 
