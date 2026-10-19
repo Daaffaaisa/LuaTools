@@ -269,7 +269,8 @@ public class SteamLibraryViewModelTests
             string localConfig = Path.Combine(tempDir, "userdata", "915269253", "config", "localconfig.vdf");
             File.WriteAllText(localConfig, "\"UserLocalConfigStore\" { \"Software\" { \"Valve\" { \"Steam\" { \"apps\" { \"570\" { \"playtime\" \"100\" } } } } } }");
 
-            var settings = new SettingsService();
+            string tempSettings = Path.Combine(tempDir, "settings.json");
+            var settings = new SettingsService(tempSettings);
             settings.SteamPathOverride = tempDir;
             var steam = new SteamService(settings);
             var service = new SteamLibraryService(steam);
@@ -308,6 +309,283 @@ public class SteamLibraryViewModelTests
         Assert.False(itemNotInstalled.IsInstalled);
         Assert.Equal("Not Installed", itemNotInstalled.StatusBadge);
         Assert.Equal("#475569", itemNotInstalled.StatusBadgeBackground);
+    }
+
+    [Fact]
+    public void SettingsService_CustomFilePath_DoesNotTouchDefaultSettings()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), "SettingsTest_" + System.Guid.NewGuid());
+        Directory.CreateDirectory(tempDir);
+        string customFile = Path.Combine(tempDir, "custom_settings.json");
+
+        try
+        {
+            var service = new SettingsService(customFile);
+            service.SteamPathOverride = @"C:\MockSteamFolder";
+
+            Assert.True(File.Exists(customFile));
+            var reloaded = new SettingsService(customFile);
+            Assert.Equal(@"C:\MockSteamFolder", reloaded.SteamPathOverride);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void SteamLibraryService_EnumeratePackageAppIds_ExtractsAppIdsFromPackageInfo()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), "PkgInfoTest_" + System.Guid.NewGuid());
+        Directory.CreateDirectory(Path.Combine(tempDir, "appcache"));
+        string vdfPath = Path.Combine(tempDir, "appcache", "packageinfo.vdf");
+
+        using (var ms = new MemoryStream())
+        using (var bw = new BinaryWriter(ms))
+        {
+            // Dummy header
+            bw.Write(new byte[] { 0x28, 0x55, 0x56, 0x06, 0x01, 0x00, 0x00, 0x00 });
+
+            // "appids\0"
+            bw.Write(System.Text.Encoding.ASCII.GetBytes("appids\0"));
+
+            // Entry 0: type 0x02, "0\0", 570 (Dota 2)
+            bw.Write((byte)0x02);
+            bw.Write(System.Text.Encoding.ASCII.GetBytes("0\0"));
+            bw.Write((uint)570);
+
+            // Entry 1: type 0x02, "1\0", 730 (CS2)
+            bw.Write((byte)0x02);
+            bw.Write(System.Text.Encoding.ASCII.GetBytes("1\0"));
+            bw.Write((uint)730);
+
+            // End of appids block: 0x08
+            bw.Write((byte)0x08);
+
+            File.WriteAllBytes(vdfPath, ms.ToArray());
+        }
+
+        try
+        {
+            string tempSettings = Path.Combine(tempDir, "settings.json");
+            var settings = new SettingsService(tempSettings);
+            settings.SteamPathOverride = tempDir;
+            var steam = new SteamService(settings);
+            var service = new SteamLibraryService(steam);
+
+            var appIds = service.EnumeratePackageAppIds();
+            Assert.Contains(570, appIds);
+            Assert.Contains(730, appIds);
+            Assert.DoesNotContain(814380, appIds);
+
+            // Missing steam root / file returns empty set
+            var emptySet = service.EnumeratePackageAppIds(Path.Combine(tempDir, "nonexistent"));
+            Assert.Empty(emptySet);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void SteamLibraryService_EnumerateInjectedAppIds_ParsesNumericLuaFilesAndIgnoresOthers()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), "InjectedAppIdsTest_" + System.Guid.NewGuid());
+        string stPlugIn = Path.Combine(tempDir, "config", "stplug-in");
+        Directory.CreateDirectory(stPlugIn);
+
+        try
+        {
+            File.WriteAllText(Path.Combine(stPlugIn, "814380.lua"), "addappid(814380)");
+            File.WriteAllText(Path.Combine(stPlugIn, "346110.lua"), "addappid(346110)");
+            File.WriteAllText(Path.Combine(stPlugIn, "Steamtools.lua"), "-- helper script");
+
+            string tempSettings = Path.Combine(tempDir, "settings.json");
+            var settings = new SettingsService(tempSettings);
+            settings.SteamPathOverride = tempDir;
+            var steam = new SteamService(settings);
+            var service = new SteamLibraryService(steam);
+
+            var injected = service.EnumerateInjectedAppIds();
+            Assert.Contains(814380, injected);
+            Assert.Contains(346110, injected);
+            Assert.Equal(2, injected.Count);
+
+            var empty = service.EnumerateInjectedAppIds(Path.Combine(tempDir, "nonexistent"));
+            Assert.Empty(empty);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public void SteamLibraryService_EnumerateOwnedGames_ExcludesPureInjectedGamesAndShortcuts()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), "PureInjectedFilterTest_" + System.Guid.NewGuid());
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            // 1. Account setup
+            string configDir = Path.Combine(tempDir, "config");
+            Directory.CreateDirectory(configDir);
+            File.WriteAllText(Path.Combine(configDir, "loginusers.vdf"), 
+                "\"users\" { \"76561198875534981\" { \"AccountName\" \"user1\" \"mostrecent\" \"1\" } }");
+
+            // 2. packageinfo.vdf contains 570 (Dota 2) and 346110 (ARK)
+            string appcacheDir = Path.Combine(tempDir, "appcache");
+            Directory.CreateDirectory(appcacheDir);
+            using (var ms = new MemoryStream())
+            using (var bw = new BinaryWriter(ms))
+            {
+                bw.Write(new byte[] { 0x28, 0x55, 0x56, 0x06, 0x01, 0x00, 0x00, 0x00 });
+                bw.Write(System.Text.Encoding.ASCII.GetBytes("appids\0"));
+                // 570
+                bw.Write((byte)0x02);
+                bw.Write(System.Text.Encoding.ASCII.GetBytes("0\0"));
+                bw.Write((uint)570);
+                // 346110
+                bw.Write((byte)0x02);
+                bw.Write(System.Text.Encoding.ASCII.GetBytes("1\0"));
+                bw.Write((uint)346110);
+                bw.Write((byte)0x08);
+                File.WriteAllBytes(Path.Combine(appcacheDir, "packageinfo.vdf"), ms.ToArray());
+            }
+
+            // 3. stplug-in:
+            // 814380.lua -> pure injected (NOT in packageinfo)
+            // 346110.lua -> legit with injected DLC (IN packageinfo)
+            string stplugin = Path.Combine(tempDir, "config", "stplug-in");
+            Directory.CreateDirectory(stplugin);
+            File.WriteAllText(Path.Combine(stplugin, "814380.lua"), "addappid(814380)");
+            File.WriteAllText(Path.Combine(stplugin, "346110.lua"), "addappid(346110)");
+
+            // 4. librarycache:
+            // 570.json (legit vanilla)
+            // 346110.json (legit with injected DLC)
+            // 814380.json (pure injected)
+            // 2799290266.json (non-Steam shortcut)
+            string cacheDir = Path.Combine(tempDir, "userdata", "915269253", "config", "librarycache");
+            Directory.CreateDirectory(cacheDir);
+            File.WriteAllText(Path.Combine(cacheDir, "570.json"), "{}");
+            File.WriteAllText(Path.Combine(cacheDir, "346110.json"), "{}");
+            File.WriteAllText(Path.Combine(cacheDir, "814380.json"), "{}");
+            File.WriteAllText(Path.Combine(cacheDir, "2799290266.json"), "{}");
+
+            // 5. Installed appmanifest:
+            // 814380 is also installed! (Even though installed, it is pure injected and must be excluded from Steam Library tab)
+            string steamapps = Path.Combine(tempDir, "steamapps");
+            Directory.CreateDirectory(Path.Combine(steamapps, "common", "Sekiro"));
+            File.WriteAllText(Path.Combine(steamapps, "appmanifest_814380.acf"), 
+                "\"AppState\" { \"appid\" \"814380\" \"name\" \"Sekiro\" \"installdir\" \"Sekiro\" }");
+
+            string tempSettings = Path.Combine(tempDir, "settings.json");
+            var settings = new SettingsService(tempSettings);
+            settings.SteamPathOverride = tempDir;
+            var steam = new SteamService(settings);
+            var service = new SteamLibraryService(steam);
+
+            var ownedGames = service.EnumerateOwnedGames().ToList();
+            var appIds = ownedGames.Select(g => g.AppId).ToHashSet();
+
+            // Verify assertions:
+            Assert.Contains(570, appIds);
+            Assert.Contains(346110, appIds);
+            Assert.DoesNotContain(814380, appIds);
+            Assert.DoesNotContain(2799290266, appIds);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+        }
+    }
+
+    [Fact]
+    public async System.Threading.Tasks.Task SteamLibraryViewModel_ScanLibraryAsync_FiltersPureInjectedAndPopulatesStatusBadges()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), "ScanLibFilterTest_" + System.Guid.NewGuid());
+        Directory.CreateDirectory(tempDir);
+
+        try
+        {
+            // Setup account
+            string configDir = Path.Combine(tempDir, "config");
+            Directory.CreateDirectory(configDir);
+            File.WriteAllText(Path.Combine(configDir, "loginusers.vdf"), 
+                "\"users\" { \"76561198875534981\" { \"AccountName\" \"user1\" \"mostrecent\" \"1\" } }");
+
+            // packageinfo.vdf: contains 570 (Dota 2) and 346110 (ARK)
+            string appcacheDir = Path.Combine(tempDir, "appcache");
+            Directory.CreateDirectory(appcacheDir);
+            using (var ms = new MemoryStream())
+            using (var bw = new BinaryWriter(ms))
+            {
+                bw.Write(new byte[] { 0x28, 0x55, 0x56, 0x06, 0x01, 0x00, 0x00, 0x00 });
+                bw.Write(System.Text.Encoding.ASCII.GetBytes("appids\0"));
+                bw.Write((byte)0x02);
+                bw.Write(System.Text.Encoding.ASCII.GetBytes("0\0"));
+                bw.Write((uint)570);
+                bw.Write((byte)0x02);
+                bw.Write(System.Text.Encoding.ASCII.GetBytes("1\0"));
+                bw.Write((uint)346110);
+                bw.Write((byte)0x08);
+                File.WriteAllBytes(Path.Combine(appcacheDir, "packageinfo.vdf"), ms.ToArray());
+            }
+
+            // stplug-in:
+            // 814380.lua -> pure injected (Sekiro)
+            // 346110.lua -> injected DLC (ARK)
+            string stplugin = Path.Combine(tempDir, "config", "stplug-in");
+            Directory.CreateDirectory(stplugin);
+            File.WriteAllText(Path.Combine(stplugin, "814380.lua"), "addappid(814380)");
+            File.WriteAllText(Path.Combine(stplugin, "346110.lua"), "addappid(346110)");
+
+            // librarycache:
+            string cacheDir = Path.Combine(tempDir, "userdata", "915269253", "config", "librarycache");
+            Directory.CreateDirectory(cacheDir);
+            File.WriteAllText(Path.Combine(cacheDir, "570.json"), "{}");
+            File.WriteAllText(Path.Combine(cacheDir, "346110.json"), "{}");
+            File.WriteAllText(Path.Combine(cacheDir, "814380.json"), "{}");
+
+            // Installed apps: 346110 is installed
+            string steamapps = Path.Combine(tempDir, "steamapps");
+            string common = Path.Combine(steamapps, "common", "ARK");
+            Directory.CreateDirectory(common);
+            File.WriteAllText(Path.Combine(steamapps, "appmanifest_346110.acf"), 
+                "\"AppState\" { \"appid\" \"346110\" \"name\" \"ARK: Survival Evolved\" \"installdir\" \"ARK\" }");
+
+            string tempSettings = Path.Combine(tempDir, "settings.json");
+            var settings = new SettingsService(tempSettings);
+            settings.SteamPathOverride = tempDir;
+            var steam = new SteamService(settings);
+            var service = new SteamLibraryService(steam);
+
+            var vm = new SteamLibraryViewModel(service, steam);
+            await vm.ScanLibraryAsync();
+
+            Assert.Equal(2, vm.TotalGamesCount);
+            var ids = vm.FilteredGames.Select(g => g.AppId).ToList();
+            Assert.Contains(570, ids);
+            Assert.Contains(346110, ids);
+            Assert.DoesNotContain(814380, ids);
+
+            var ark = vm.FilteredGames.First(g => g.AppId == 346110);
+            Assert.True(ark.IsInstalled);
+            Assert.True(ark.IsDlcInjected);
+            Assert.Equal("DLCs Injected", ark.StatusBadge);
+
+            var dota = vm.FilteredGames.First(g => g.AppId == 570);
+            Assert.False(dota.IsInstalled);
+            Assert.False(dota.IsDlcInjected);
+            Assert.Equal("Not Installed", dota.StatusBadge);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true);
+        }
     }
 }
 

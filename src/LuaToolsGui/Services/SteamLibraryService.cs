@@ -203,7 +203,131 @@ public partial class SteamLibraryService(SteamService steam)
     }
 
     /// <summary>
-    /// Enumerates all game AppIDs owned by the user via local Steam library cache & config files.
+    /// Parses appcache\packageinfo.vdf to extract all AppIDs associated with legitimate packages/licenses owned by the user.
+    /// Returns an empty set if the file is missing or unreadable.
+    /// </summary>
+    public HashSet<long> EnumeratePackageAppIds(string? steamRoot = null)
+    {
+        var result = new HashSet<long>();
+        steamRoot ??= steam.EffectivePath;
+        if (steamRoot is null) return result;
+
+        string packageInfoPath = Path.Combine(steamRoot, "appcache", "packageinfo.vdf");
+        if (!File.Exists(packageInfoPath)) return result;
+
+        try
+        {
+            byte[] bytes = File.ReadAllBytes(packageInfoPath);
+            if (bytes.Length < 16) return result;
+
+            // Pattern for binary key: "appids\0" (0x61, 0x70, 0x70, 0x69, 0x64, 0x73, 0x00)
+            byte[] needle = [(byte)'a', (byte)'p', (byte)'p', (byte)'i', (byte)'d', (byte)'s', 0];
+
+            int pos = 0;
+            while (pos <= bytes.Length - needle.Length)
+            {
+                bool match = true;
+                for (int i = 0; i < needle.Length; i++)
+                {
+                    if (bytes[pos + i] != needle[i])
+                    {
+                        match = false;
+                        break;
+                    }
+                }
+
+                if (!match)
+                {
+                    pos++;
+                    continue;
+                }
+
+                pos += needle.Length;
+
+                // Inside the appids sub-object.
+                // KeyValues binary format: [type: byte][key: null-terminated ASCII string][value: 4 bytes uint32]
+                // Object terminates with 0x08 (End of object)
+                while (pos < bytes.Length)
+                {
+                    byte type = bytes[pos++];
+                    if (type == 0x08)
+                    {
+                        // End of appids block
+                        break;
+                    }
+
+                    if (type != 0x02)
+                    {
+                        // Not an int32/uint32 field, unexpected in appids block
+                        break;
+                    }
+
+                    // Skip the index string (e.g. "0\0", "1\0")
+                    while (pos < bytes.Length && bytes[pos] != 0)
+                    {
+                        pos++;
+                    }
+                    if (pos < bytes.Length && bytes[pos] == 0)
+                    {
+                        pos++; // skip null terminator
+                    }
+
+                    if (pos + 4 <= bytes.Length)
+                    {
+                        uint appId = BitConverter.ToUInt32(bytes, pos);
+                        pos += 4;
+                        if (appId > 0)
+                        {
+                            result.Add(appId);
+                        }
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // Best effort: if file is being written by Steam or corrupted, return whatever was found
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Enumerates all AppIDs that have injected Lua files in config\stplug-in\*.lua.
+    /// Non-numeric Lua filenames (e.g. Steamtools.lua) are safely ignored.
+    /// </summary>
+    public HashSet<long> EnumerateInjectedAppIds(string? steamRoot = null)
+    {
+        var result = new HashSet<long>();
+        steamRoot ??= steam.EffectivePath;
+        if (steamRoot is null) return result;
+
+        string pluginDir = Path.Combine(steamRoot, "config", "stplug-in");
+        if (!Directory.Exists(pluginDir)) return result;
+
+        try
+        {
+            foreach (string file in Directory.EnumerateFiles(pluginDir, "*.lua"))
+            {
+                string baseName = Path.GetFileNameWithoutExtension(file);
+                if (long.TryParse(baseName, out long appId) && appId > 0)
+                {
+                    result.Add(appId);
+                }
+            }
+        }
+        catch { }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Enumerates all legitimate game AppIDs owned by the user via local Steam library cache & config files.
+    /// Pure injected games (in stplug-in but not in packageinfo.vdf) and non-Steam shortcuts are filtered out.
     /// </summary>
     public HashSet<long> EnumerateOwnedAppIds(string? steamRoot = null, uint? accountId = null)
     {
@@ -212,6 +336,8 @@ public partial class SteamLibraryService(SteamService steam)
         if (steamRoot is null) return result;
 
         accountId ??= GetActiveAccountId(steamRoot);
+
+        var rawCandidates = new HashSet<long>();
 
         // 1. Scan userdata\<accountId>\config\librarycache\*.json
         if (accountId.HasValue)
@@ -226,7 +352,7 @@ public partial class SteamLibraryService(SteamService steam)
                         string baseName = Path.GetFileNameWithoutExtension(file);
                         if (long.TryParse(baseName, out long appId) && appId > 0)
                         {
-                            result.Add(appId);
+                            rawCandidates.Add(appId);
                         }
                     }
                 }
@@ -245,7 +371,7 @@ public partial class SteamLibraryService(SteamService steam)
                     {
                         if (long.TryParse(m.Groups[1].Value, out long id) && id > 10)
                         {
-                            result.Add(id);
+                            rawCandidates.Add(id);
                         }
                     }
                 }
@@ -256,7 +382,25 @@ public partial class SteamLibraryService(SteamService steam)
         // 3. Include any games currently installed in Steam
         foreach (var inst in EnumerateInstalled())
         {
-            result.Add(inst.AppId);
+            rawCandidates.Add(inst.AppId);
+        }
+
+        // 4. Retrieve package licenses and injected plugins to filter pure injected games
+        var packageAppIds = EnumeratePackageAppIds(steamRoot);
+        var injectedAppIds = EnumerateInjectedAppIds(steamRoot);
+
+        foreach (long appId in rawCandidates)
+        {
+            // Filter non-Steam shortcuts or invalid IDs
+            if (appId <= 0 || appId > 2147483647) continue;
+
+            // Pure injected game: present in stplug-in but not in packageinfo.vdf
+            if (injectedAppIds.Contains(appId) && !packageAppIds.Contains(appId))
+            {
+                continue;
+            }
+
+            result.Add(appId);
         }
 
         return result;
@@ -264,6 +408,7 @@ public partial class SteamLibraryService(SteamService steam)
 
     /// <summary>
     /// Enumerates all original owned games for the user, matching with their installed state.
+    /// Pure injected games and shortcuts are excluded.
     /// </summary>
     public IEnumerable<OwnedGame> EnumerateOwnedGames()
     {
@@ -277,11 +422,6 @@ public partial class SteamLibraryService(SteamService steam)
         }
 
         var ownedIds = EnumerateOwnedAppIds(steamRoot);
-
-        foreach (var kvp in installedMap)
-        {
-            ownedIds.Add(kvp.Key);
-        }
 
         foreach (long appId in ownedIds)
         {

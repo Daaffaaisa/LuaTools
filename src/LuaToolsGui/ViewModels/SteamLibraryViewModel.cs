@@ -90,6 +90,12 @@ public partial class SteamLibraryViewModel : ObservableObject
     {
     }
 
+    public SteamLibraryViewModel(SteamLibraryService library, SteamService steam)
+    {
+        _library = library;
+        _steam = steam;
+    }
+
     public SteamLibraryViewModel(
         SteamLibraryService library,
         SteamService steam,

@@ -68,13 +68,25 @@ public class AppSettings
 
 public class SettingsService
 {
-    private static readonly string Dir =
+    public static readonly string DefaultDir =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "LuaToolsGuiDev");
-    private static readonly string FilePath = Path.Combine(Dir, "settings.json");
+    public static readonly string DefaultFilePath = Path.Combine(DefaultDir, "settings.json");
+
+    private readonly string _filePath;
+    private readonly string _dir;
+    private readonly string _tmpPath;
+    private readonly string _bakPath;
 
     private AppSettings _settings = new();
 
-    public SettingsService() => Load();
+    public SettingsService(string? customSettingsFilePath = null)
+    {
+        _filePath = customSettingsFilePath ?? DefaultFilePath;
+        _dir = Path.GetDirectoryName(_filePath) ?? DefaultDir;
+        _tmpPath = _filePath + ".tmp";
+        _bakPath = _filePath + ".bak";
+        Load();
+    }
 
     /// <summary>User-chosen Steam folder. Null = auto-detect from registry. Persisted only when set.</summary>
     public string? SteamPathOverride
@@ -208,17 +220,14 @@ public string? HubcapApiKey
         set { _settings.DnsMode = value; Save(); }
     }
 
-    private static readonly string TmpPath = FilePath + ".tmp";
-    private static readonly string BakPath = FilePath + ".bak";
-
     private void Load()
     {
         // Prefer the primary file; fall back to the last-good .bak. Crucially, NEVER silently reset a
         // corrupt-but-present file to defaults (a later Save would then overwrite it and lose real data).
         // Move it aside to .corrupt so it's preserved and can't be clobbered.
-        if (TryLoad(FilePath)) return;
-        PreserveCorrupt(FilePath);
-        if (TryLoad(BakPath)) return;
+        if (TryLoad(_filePath)) return;
+        PreserveCorrupt(_filePath);
+        if (TryLoad(_bakPath)) return;
         _settings = new AppSettings();
     }
 
@@ -269,20 +278,20 @@ public string? HubcapApiKey
             && _settings.FastFetch is null;
         if (empty)
         {
-            foreach (var p in new[] { FilePath, BakPath, TmpPath })
+            foreach (var p in new[] { _filePath, _bakPath, _tmpPath })
                 try { if (File.Exists(p)) File.Delete(p); } catch { /* best effort */ }
             return;
         }
 
-        Directory.CreateDirectory(Dir);
+        Directory.CreateDirectory(_dir);
         string json = JsonSerializer.Serialize(_settings, new JsonSerializerOptions { WriteIndented = true });
 
         // Atomic write: fill a temp file, then rename it over the target. A crash/kill mid-write can only
         // ever truncate the .tmp. The live settings.json is replaced by an atomic move (same-volume rename)
         // and is therefore never left half-written. (This class of loss is exactly what a forced kill during
         // a plain WriteAllText caused.) A .bak of the last good file is kept as a second recovery source.
-        File.WriteAllText(TmpPath, json);
-        try { if (File.Exists(FilePath)) File.Copy(FilePath, BakPath, overwrite: true); } catch { /* best effort */ }
-        File.Move(TmpPath, FilePath, overwrite: true);
+        File.WriteAllText(_tmpPath, json);
+        try { if (File.Exists(_filePath)) File.Copy(_filePath, _bakPath, overwrite: true); } catch { /* best effort */ }
+        File.Move(_tmpPath, _filePath, overwrite: true);
     }
 }
